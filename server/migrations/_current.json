@@ -1,0 +1,9 @@
+{
+    "tables": {
+        "departments": {
+            "tableName": "departments",
+            "indexes": []
+        }
+    },
+    "revision": 1
+}

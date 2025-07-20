@@ -1,46 +1,79 @@
-const { User } = require('./userModel');
+const db = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const nodemailer = require('nodemailer');
-require('dotenv').config(); // для работы с переменными окружения
+require('dotenv').config();
 
 // Получить всех пользователей (только для админа)
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.findAll({ attributes: { exclude: ['passwordHash'] } });
+    const users = await db.User.findAll({ 
+      attributes: { exclude: ['passwordHash'] },
+      include: {
+        model: db.Department,
+        as: 'department',
+        attributes: ['id', 'name']
+      }
+    });
     res.json(users);
   } catch (e) {
-    console.error(e);
+    console.error('Get all users error:', e);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
 
-// Регистрация пользователя
 exports.register = async (req, res) => {
   try {
-    // Валидация
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-    const { username, password, firstName, lastName, role, phone, masterId } = req.body;
+    const { username, password, firstName, lastName, role, phone, masterId, departmentId } = req.body;
 
-    // Проверка, что пользователь не существует
-    const candidate = await User.findOne({ where: { username } });
-    if (candidate) return res.status(400).json({ message: 'Пользователь уже существует' });
+    // Проверка существования отдела
+    const department = await db.Department.findByPk(departmentId);
+    if (!department) {
+      return res.status(400).json({ message: 'Указанный отдел не существует' });
+    }
+
+    // Проверка существования пользователя
+    const existingUser = await db.User.findOne({ where: { username } });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Пользователь с таким именем уже существует' });
+    }
 
     // Хэширование пароля
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Создаем пользователя
-    const user = await User.create({
-      username, passwordHash, firstName, lastName, role, phone, masterId
+    // Создание пользователя
+    const user = await db.User.create({
+      username,
+      passwordHash,
+      firstName,
+      lastName,
+      role,
+      phone,
+      masterId,
+      departmentId
     });
 
-    res.status(201).json({ message: 'Пользователь создан', userId: user.id });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: 'Ошибка сервера' });
+    // Не возвращаем хэш пароля в ответе
+    const userResponse = user.get({ plain: true });
+    delete userResponse.passwordHash;
+
+    res.status(201).json({
+      message: 'Пользователь успешно зарегистрирован',
+      user: userResponse
+    });
+
+  } catch (error) {
+    console.error('Ошибка регистрации:', error);
+    res.status(500).json({
+      message: 'Произошла ошибка при регистрации',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -49,35 +82,68 @@ exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    const user = await User.scope('withPassword').findOne({ where: { username } });
-    if (!user) return res.status(400).json({ message: 'Неверный логин или пароль' });
+    const user = await db.User.scope('withPassword').findOne({ 
+      where: { username },
+      include: {
+        model: db.Department,
+        as: 'department',
+        attributes: ['id', 'name']
+      }
+    });
+    
+    if (!user) {
+      return res.status(400).json({ message: 'Неверный логин или пароль' });
+    }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) return res.status(400).json({ message: 'Неверный логин или пароль' });
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Неверный логин или пароль' });
+    }
 
-    // Создаем JWT
     const token = jwt.sign(
-      { userId: user.id, role: user.role },
+      { 
+        userId: user.id, 
+        role: user.role,
+        departmentId: user.departmentId
+      },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
 
-    res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
+    res.json({ 
+      token, 
+      user: { 
+        id: user.id, 
+        username: user.username, 
+        role: user.role,
+        department: user.department
+      } 
+    });
   } catch (e) {
-    console.error(e);
+    console.error('Login error:', e);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
 
-// Получить информацию о текущем пользователе (по токену)
+// Получить информацию о текущем пользователе
 exports.getMe = async (req, res) => {
   try {
-    const userId = req.user.userId;
-    const user = await User.findByPk(userId, { attributes: { exclude: ['passwordHash'] } });
-    if (!user) return res.status(404).json({ message: 'Пользователь не найден' });
+    const user = await db.User.findByPk(req.user.userId, { 
+      attributes: { exclude: ['passwordHash'] },
+      include: {
+        model: db.Department,
+        as: 'department',
+        attributes: ['id', 'name']
+      }
+    });
+    
+    if (!user) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
+    }
+    
     res.json(user);
   } catch (e) {
-    console.error(e);
+    console.error('Get me error:', e);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
@@ -86,7 +152,7 @@ exports.getMe = async (req, res) => {
 exports.getProfile = async (req, res) => {
   try {
     const userId = req.user.userId; // пользователь из middleware аутентификации
-    const user = await User.findByPk(userId, { attributes: { exclude: ['passwordHash'] } });
+    const user = await db.User.findByPk(userId, { attributes: { exclude: ['passwordHash'] } });
     if (!user) return res.status(404).json({ message: 'Пользователь не найден' });
 
     res.json(user);
@@ -134,7 +200,7 @@ exports.requestAccess = async (req, res) => {
 exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const deleted = await User.destroy({ where: { id } });
+    const deleted = await db.User.destroy({ where: { id } });
     if (!deleted) return res.status(404).json({ message: 'Пользователь не найден' });
     res.json({ message: 'Пользователь удалён' });
   } catch (e) {
@@ -142,3 +208,4 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
+

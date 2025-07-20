@@ -1,14 +1,19 @@
+'use strict';
+
 module.exports = (sequelize, DataTypes) => {
   const Department = sequelize.define('Department', {
     id: {
       type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true
+      primaryKey: true,
+      autoIncrement: true
     },
     name: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true
+      unique: true,
+      validate: {
+        notEmpty: true
+      }
     },
     description: {
       type: DataTypes.STRING,
@@ -16,11 +21,15 @@ module.exports = (sequelize, DataTypes) => {
     }
   }, {
     tableName: 'departments',
-    timestamps: false
+    timestamps: false,
+    underscored: true
   });
 
   Department.associate = (models) => {
-    // Здесь можно будет прописать Department.hasMany(models.User, { ... });
+    Department.hasMany(models.User, {
+      foreignKey: 'departmentId',
+      as: 'users'
+    });
   };
 
   return Department;
