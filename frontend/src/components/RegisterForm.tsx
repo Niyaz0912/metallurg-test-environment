@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 type Props = {
   onRegisterSuccess: () => void;
+};
+
+type Department = {
+  id: number;
+  name: string;
 };
 
 const RegisterForm: React.FC<Props> = ({ onRegisterSuccess }) => {
@@ -11,16 +16,33 @@ const RegisterForm: React.FC<Props> = ({ onRegisterSuccess }) => {
     firstName: '',
     lastName: '',
     phone: '',
-    role: 'employee', // по умолчанию "сотрудник" — первый вариант ENUM
+    role: 'employee',
+    departmentId: '', // изначально пусто (строка!)
   });
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Загрузка департаментов
+  useEffect(() => {
+    fetch('http://127.0.0.1:3001/api/departments')
+      .then((r) => r.json())
+      .then(setDepartments)
+      .catch((e) => setError('Ошибка загрузки департаментов'));
+  }, []);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm(prev => ({
+      ...prev,
+      [name]:
+        name === 'departmentId' && value !== ''
+          ? Number(value) // Преобразуем в число!
+          : value,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,15 +114,34 @@ const RegisterForm: React.FC<Props> = ({ onRegisterSuccess }) => {
         value={form.lastName}
         onChange={handleChange}
       />
+
       <input
         className="input"
-        type="text"
+        type="tel"
         name="phone"
-        placeholder="Телефон"
-        required
+        placeholder="Телефон (+7XXXXXXXXXX)"
+        pattern="^\+7\d{10}$"
         value={form.phone}
         onChange={handleChange}
+        maxLength={12}
+        title="Номер в формате +7XXXXXXXXXX (если указываете)"
+        autoComplete="tel"
       />
+
+      <select
+        name="departmentId"
+        value={form.departmentId}
+        onChange={handleChange}
+        className="input"
+        required
+      >
+        <option value="">Выберите департамент</option>
+        {departments.map(dep => (
+          <option key={dep.id} value={dep.id}>
+            {dep.name}
+          </option>
+        ))}
+      </select>
 
       <select
         name="role"
