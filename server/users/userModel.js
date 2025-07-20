@@ -18,7 +18,7 @@ User.init({
     unique: true,
     validate: {
       len: [1, 150],
-      is: /^[a-zA-Z0-9@._+-]+$/i // регэксп похожий на Django username_validator
+      is: /^[a-zA-Z0-9@._+-]+$/i
     },
   },
   firstName: {
@@ -37,12 +37,15 @@ User.init({
   phone: {
     type: DataTypes.STRING(20),
     allowNull: true,
+    validate: {
+        is: /^(\+7)[0-9]{10}$/ // Только +7, затем ровно 10 цифр
+    }
   },
   masterId: {
     type: DataTypes.INTEGER,
     allowNull: true,
     references: {
-      model: 'Users', // имя таблицы
+      model: 'Users',
       key: 'id'
     },
     onDelete: 'SET NULL'
@@ -50,6 +53,17 @@ User.init({
   passwordHash: {
     type: DataTypes.STRING,
     allowNull: false,
+  },
+  // <--- добавляем DEPARTMENT ID
+  departmentId: {
+    type: DataTypes.INTEGER,
+    allowNull: false, // если всегда должен быть отдел. Можно поставить true, если не обязательно.
+    references: {
+      model: 'departments', // название таблицы в БД
+      key: 'id'
+    },
+    onUpdate: 'CASCADE',
+    onDelete: 'RESTRICT'
   }
 }, {
   sequelize,
@@ -69,9 +83,12 @@ User.init({
 // Создаем связь мастер - операторы (сотрудники)
 User.hasMany(User, { as: 'operators', foreignKey: 'masterId' });
 User.belongsTo(User, { as: 'master', foreignKey: 'masterId' });
+// Связь с департаментом (belongsTo)
+User.associate = (models) => {
+  User.belongsTo(models.Department, { foreignKey: 'departmentId', as: 'department' });
+};
 
 module.exports = {
   User,
   UserRoles
 };
-
