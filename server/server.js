@@ -11,6 +11,10 @@ app.use(express.json());
 const userRoutes = require('./users/userRoutes');
 app.use('/api/users', userRoutes);
 
+// Подключаем роуты департаментов
+const departmentRoutes = require('./department/departmentRoutes');
+app.use('/api/departments', departmentRoutes);
+
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running!' });
 });
@@ -18,4 +22,3 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-
