@@ -63,6 +63,10 @@ module.exports = (sequelize, DataTypes) => {
       },
       onUpdate: 'CASCADE',
       onDelete: 'RESTRICT'
+    },
+    position: {           // <--- Новое поле для должности
+      type: DataTypes.STRING,
+      allowNull: true
     }
   }, {
     tableName: 'users',
@@ -95,3 +99,4 @@ module.exports = (sequelize, DataTypes) => {
   User.UserRoles = UserRoles;
   return User;
 };
+

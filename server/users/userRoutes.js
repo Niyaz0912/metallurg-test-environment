@@ -16,4 +16,7 @@ router.get('/me', authMiddleware, userController.getMe);
 // GET /api/users — список всех пользователей (только admin)
 router.get('/', authMiddleware, roleMiddleware(['admin']), userController.getAllUsers);
 
+// DELETE /api/users/:id — удаление пользователя (только admin)
+router.delete('/:id', authMiddleware, roleMiddleware(['admin']), userController.deleteUser);
+
 module.exports = router;

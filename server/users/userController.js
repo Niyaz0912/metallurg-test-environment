@@ -82,7 +82,7 @@ exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    const user = await db.User.scope('withPassword').findOne({ 
+    const user = await db.User.scope('withPassword').findOne({
       where: { username },
       include: {
         model: db.Department,
@@ -90,7 +90,7 @@ exports.login = async (req, res) => {
         attributes: ['id', 'name']
       }
     });
-    
+
     if (!user) {
       return res.status(400).json({ message: 'Неверный логин или пароль' });
     }
@@ -100,24 +100,28 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Неверный логин или пароль' });
     }
 
+    // Формируем JWT с position
     const token = jwt.sign(
-      { 
-        userId: user.id, 
+      {
+        userId: user.id,
         role: user.role,
-        departmentId: user.departmentId
+        departmentId: user.departmentId,
+        position: user.position  // добавили должность
       },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
 
-    res.json({ 
-      token, 
-      user: { 
-        id: user.id, 
-        username: user.username, 
+    // Отдаем token и данные пользователя с position
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
         role: user.role,
-        department: user.department
-      } 
+        department: user.department,
+        position: user.position  // добавлено поле должности в ответ
+      }
     });
   } catch (e) {
     console.error('Login error:', e);
