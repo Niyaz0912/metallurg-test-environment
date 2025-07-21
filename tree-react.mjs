@@ -66,7 +66,7 @@ function tree(dirPath, indent = '', maxDepth = 3, curDepth = 0) {
 
 // Использование: node tree-react.mjs [путь] [глубина]
 const root = process.argv[2] || '.';
-const depth = parseInt(process.argv[4], 10) || 3;
+const depth = parseInt(process.argv[6], 10) || 3;
 
 console.log(chalk.magenta.bold(root));
 tree(root, '', depth);
