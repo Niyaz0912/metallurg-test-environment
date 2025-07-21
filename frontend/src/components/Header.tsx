@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, Bell, User, Menu, ArrowLeft } from 'lucide-react';
+import { DepartmentSwitcher } from './DepartmentSwitcher';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -10,14 +11,35 @@ interface HeaderProps {
   breadcrumb?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ 
-  onMenuClick, 
-  searchQuery, 
-  onSearchChange, 
+export const Header: React.FC<HeaderProps> = ({
+  onMenuClick,
+  searchQuery,
+  onSearchChange,
   currentView,
   onBackClick,
-  breadcrumb
+  breadcrumb,
 }) => {
+  const [userName, setUserName] = useState<string>(''); // Имя
+  const [userLastName, setUserLastName] = useState<string>(''); // Фамилия
+
+  useEffect(() => {
+    try {
+      // Пример, если пользователь сохранён в localStorage как JSON строка под ключом 'user'
+      const userJson = localStorage.getItem('user');
+      if (userJson) {
+        const user = JSON.parse(userJson);
+        setUserName(user.name || '');
+        setUserLastName(user.lastName || '');
+      } else {
+        // Альтернатива: если имя и фамилия хранятся по отдельности:
+        // setUserName(localStorage.getItem('userName') || '');
+        // setUserLastName(localStorage.getItem('userLastName') || '');
+      }
+    } catch {
+      // Ошибка парсинга — можно не делать ничего или логировать
+    }
+  }, []);
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
       <div className="flex items-center justify-between px-6 py-4">
@@ -63,6 +85,8 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="flex items-center space-x-4">
+          <DepartmentSwitcher />
+
           <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative">
             <Bell className="w-5 h-5 text-gray-600" />
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
@@ -71,7 +95,9 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
               <User className="w-4 h-4 text-gray-600" />
             </div>
-            <span className="text-sm font-medium text-gray-700 hidden sm:block">Анна Петрова</span>
+            <span className="text-sm font-medium text-gray-700 hidden sm:block">
+              {userName || 'Пользователь'} {userLastName || ''}
+            </span>
           </div>
         </div>
       </div>

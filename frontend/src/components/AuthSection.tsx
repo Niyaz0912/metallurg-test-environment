@@ -4,9 +4,9 @@ import React from "react";
 import LoginForm from "./LoginForm";
 import RegisterForm from "./RegisterForm";
 
-// Обновлённая сигнатура onLogin: token и role!
+// Обновлённая сигнатура onLogin: token, role, departmentId
 type AuthSectionProps = {
-  onLogin: (token: string, role: string) => void;
+  onLogin: (token: string, role: string, departmentId: string) => void;
   authMode: "login" | "register";
   setAuthMode: (mode: "login" | "register") => void;
 };
@@ -46,3 +46,4 @@ const AuthSection: React.FC<AuthSectionProps> = ({ onLogin, authMode, setAuthMod
 );
 
 export default AuthSection;
+

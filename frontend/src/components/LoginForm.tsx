@@ -1,5 +1,3 @@
-// frontend/src/components/LoginForm.tsx
-
 import React, { useState } from 'react';
 
 interface LoginResponse {
@@ -11,11 +9,15 @@ interface LoginResponse {
     id: string;
     name: string;
     email: string;
+    role: string;
+    department?: {
+      id: string;
+    };
   };
 }
 
 interface Props {
-  onLogin: (token: string, role: string) => void;
+  onLogin: (token: string, role: string, departmentId: string) => void;
 }
 
 const LoginForm: React.FC<Props> = ({ onLogin }) => {
@@ -25,74 +27,81 @@ const LoginForm: React.FC<Props> = ({ onLogin }) => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value.trim() }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    if (!formData.username || !formData.password) {
-      setError('Все поля обязательны для заполнения');
-      return;
+  e.preventDefault();
+  setError('');
+  if (!formData.username || !formData.password) {
+    setError('Все поля обязательны для заполнения');
+    return;
+  }
+  setIsLoading(true);
+  try {
+    const apiUrl = `http://127.0.0.1:3001/api/users/login?t=${Date.now()}`;
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(formData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      try {
+        const errorData = JSON.parse(errorText);
+        throw new Error(errorData.error || errorData.message || `Ошибка ${response.status}`);
+      } catch {
+        throw new Error(errorText || `Ошибка ${response.status}`);
+      }
     }
-    setIsLoading(true);
-    try {
-      const apiUrl = `http://127.0.0.1:3001/api/users/login?t=${Date.now()}`;
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        try {
-          const errorData = JSON.parse(errorText);
-          throw new Error(errorData.error || errorData.message || `Ошибка ${response.status}`);
-        } catch {
-          throw new Error(errorText || `Ошибка ${response.status}`);
-        }
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('application/json')) {
-        throw new Error('Сервер вернул данные в неожиданном формате');
-      }
-
-      const data: LoginResponse = await response.json();
-
-      if (!data.token) {
-        throw new Error(data.error || data.message || 'Токен не был получен');
-      }
-
-      // Важно: пробрасываем и токен, и роль!
-      onLogin(data.token, data.role || 'user');
-    } catch (err) {
-      let errorMessage = 'Ошибка при входе в систему';
-      if (err instanceof Error) {
-        if (err.message.startsWith('<!DOCTYPE') || err.message.startsWith('<html') || err.message.includes('<!doctype html>')) {
-          errorMessage = 'Сервер вернул HTML страницу. Проверьте:\n1. Правильность URL API\n2. Запущен ли сервер backend\n3. Настройки CORS на сервере';
-        } else {
-          errorMessage = err.message;
-        }
-      }
-      setError(errorMessage);
-      console.error('Ошибка входа:', err);
-    } finally {
-      setIsLoading(false);
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      throw new Error('Сервер вернул данные в неожиданном формате');
     }
-  };
+
+    const data: LoginResponse = await response.json();
+
+    if (!data.token) throw new Error('Токен не получен');
+    if (!data.user) throw new Error('Данные пользователя отсутствуют в ответе');
+
+    // Вот тут добавляем лог для отладки
+    const depId = data.user.department && data.user.department.id ? String(data.user.department.id) : '0';
+    console.log("Login data:", { token: data.token, role: data.user.role, depId });
+
+    onLogin(data.token, data.user.role, depId);
+
+  } catch (err) {
+    let errorMessage = 'Ошибка при входе в систему';
+    if (err instanceof Error) {
+      if (
+        err.message.startsWith('<!DOCTYPE') ||
+        err.message.startsWith('<html') ||
+        err.message.includes('<!doctype html>')
+      ) {
+        errorMessage =
+          'Сервер вернул HTML страницу. Проверьте:\n1. Правильность URL API\n2. Запущен ли сервер backend\n3. Настройки CORS на сервере';
+      } else {
+        errorMessage = err.message;
+      }
+    }
+    setError(errorMessage);
+    console.error('Ошибка входа:', err);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold text-center mb-6">Вход в систему</h2>
       {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md whitespace-pre-line">
-          {error}
-        </div>
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md whitespace-pre-line">{error}</div>
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -142,3 +151,4 @@ const LoginForm: React.FC<Props> = ({ onLogin }) => {
 };
 
 export default LoginForm;
+
