@@ -18,7 +18,7 @@ const AdminPanel: React.FC<Props> = ({ token }) => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchUsers = () => {
     setLoading(true);
     fetch('http://127.0.0.1:3001/api/users', {
       headers: { 
@@ -47,7 +47,33 @@ const AdminPanel: React.FC<Props> = ({ token }) => {
         setError(err.message);
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchUsers();
   }, [token]);
+
+  const handleDelete = (userId: number) => {
+    if (!window.confirm('Вы уверены, что хотите удалить пользователя?')) return;
+
+    fetch(`http://127.0.0.1:3001/api/users/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    .then(async res => {
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Ошибка при удалении пользователя');
+      }
+      fetchUsers();
+    })
+    .catch(err => {
+      console.error('Ошибка удаления пользователя:', err);
+      alert('Не удалось удалить пользователя: ' + err.message);
+    });
+  };
 
   if (loading) {
     return <div className="p-6">Загрузка данных...</div>;
@@ -90,7 +116,10 @@ const AdminPanel: React.FC<Props> = ({ token }) => {
                     <button className="text-blue-500 hover:underline mr-2">
                       Изменить
                     </button>
-                    <button className="text-red-500 hover:underline">
+                    <button 
+                      className="text-red-500 hover:underline"
+                      onClick={() => handleDelete(u.id)}
+                    >
                       Удалить
                     </button>
                   </td>
