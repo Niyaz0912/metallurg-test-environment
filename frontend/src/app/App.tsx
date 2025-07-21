@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import WikiSection from "./components/WikiSection";
-import UserSection from "./components/UserSection";
-import AuthSection from "./components/AuthSection";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import DepartmentPortal from "./components/DepartmentPortal";
+import AuthSection from "../features/auth/AuthSection";
+import UserSection from "../features/users/UserSection";
+import WikiSection from "../features/wiki/WikiSection";
+import DepartmentPortal from "../features/departments/DepartmentPortal";
 
 type SectionType = "docs" | "profile" | "users" | "admin";
 type AuthMode = "login" | "register";
@@ -73,7 +73,6 @@ function App() {
   );
   const [authMode, setAuthMode] = useState<AuthMode>("login");
 
-  // Эффект для перенаправления при загрузке приложения
   useEffect(() => {
     const token = localStorage.getItem("authToken");
     const departmentId = localStorage.getItem("departmentId");
@@ -88,20 +87,19 @@ function App() {
   }, []);
 
   const handleLogin = (token: string, role: string, departmentId: string) => {
-  const depId = departmentId || '0';
-  setToken(token);
-  setUserRole(role as UserRole);
-  localStorage.setItem("authToken", token);
-  localStorage.setItem("userRole", role);
-  localStorage.setItem("departmentId", depId);
+    const depId = departmentId || '0';
+    setToken(token);
+    setUserRole(role as UserRole);
+    localStorage.setItem("authToken", token);
+    localStorage.setItem("userRole", role);
+    localStorage.setItem("departmentId", depId);
 
-  if (role === 'admin') {
-    window.location.href = '/';
-  } else {
-    window.location.href = `/department/${depId}`;
-  }
-};
-
+    if (role === 'admin') {
+      window.location.href = '/';
+    } else {
+      window.location.href = `/department/${depId}`;
+    }
+  };
 
   const handleLogout = () => {
     setToken(null);
@@ -134,7 +132,6 @@ function App() {
       }
     };
     checkAuth();
-    // eslint-disable-next-line
   }, [token]);
 
   if (!token) {
@@ -160,4 +157,3 @@ function App() {
 }
 
 export default App;
-

@@ -1,14 +1,14 @@
 // frontend/src/components/WikiSection.tsx
 
 import React, { useState, useMemo } from 'react';
-import { Header } from './Header';
-import { Sidebar } from './Sidebar';
-import { PositionShelf } from './PositionShelf';
-import { FolderView } from './FolderView';
-import { WikiCard } from './WikiCard';
-import { WikiModal } from './WikiModal';
-import { positions } from '../data/mockData'; // <= путь без /components!
-import { Position, DocumentFolder, WikiPage } from '../types'; // <= путь без /components!
+import Header from '../../app/layout/Header';
+import Sidebar from '../../app/layout/Sidebar';
+import { PositionShelf } from '../../components/PositionShelf';
+import { FolderView } from '../../components/FolderView';
+import { WikiCard } from './components/WikiCard';
+import { WikiModal } from './components/WikiModal';
+import { positions } from '../../data/mockData';
+import { Position, DocumentFolder, WikiPage } from '../../types';
 
 type ViewType = 'positions' | 'folders' | 'documents';
 

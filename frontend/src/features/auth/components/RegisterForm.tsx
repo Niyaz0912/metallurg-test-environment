@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 type Props = {
-  onRegisterSuccess: () => void;
+  onRegisterSuccess: (token: string, role: string, departmentId: string) => void;
 };
 
 type Department = {
@@ -46,31 +46,32 @@ const RegisterForm: React.FC<Props> = ({ onRegisterSuccess }) => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
 
-    try {
-      const res = await fetch('http://127.0.0.1:3001/api/users/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
+  try {
+    const res = await fetch('http://127.0.0.1:3001/api/users/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    });
+    const data = await res.json();
 
-      if (!res.ok) throw new Error(data.message || 'Ошибка регистрации');
+    if (!res.ok) throw new Error(data.message || 'Ошибка регистрации');
 
-      setSuccess(true);
-      setTimeout(() => {
-        setSuccess(false);
-        onRegisterSuccess();
-      }, 1500);
-    } catch (e: any) {
-      setError(e.message || 'Ошибка регистрации');
-    } finally {
-      setLoading(false);
-    }
-  };
+    setSuccess(true);
+    setTimeout(() => {
+      setSuccess(false);
+      // Передаем данные в onRegisterSuccess
+      onRegisterSuccess(data.token, data.role, data.departmentId);
+    }, 1500);
+  } catch (e: any) {
+    setError(e.message || 'Ошибка регистрации');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">

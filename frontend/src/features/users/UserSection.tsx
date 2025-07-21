@@ -1,8 +1,8 @@
 // frontend/src/components/UserSection.tsx
 
 import React from "react";
-import Profile from "./Profile";
-import UserList from "./UserList";
+import Profile from "./components/Profile";
+import UserList from "./components/UserList";
 import AdminPanel from "./AdminPanel";
 
 type UserSectionProps = {
