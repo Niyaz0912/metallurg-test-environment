@@ -4,6 +4,7 @@ import AuthSection from "../features/auth/AuthSection";
 import UserSection from "../features/users/UserSection";
 import WikiSection from "../features/wiki/WikiSection";
 import DepartmentPortal from "../features/departments/DepartmentPortal";
+import { DepartmentSwitcher } from "../features/departments/components/DepartmentSwitcher";
 
 type SectionType = "docs" | "profile" | "users" | "admin";
 type AuthMode = "login" | "register";
@@ -50,9 +51,7 @@ function MainPage({
           </button>
         )}
         <span className="ml-auto" />
-        <button onClick={handleLogout} className="text-red-500">
-          Выйти
-        </button>
+        <DepartmentSwitcher/>
       </nav>
 
       {/* Секции */}
@@ -65,7 +64,6 @@ function MainPage({
     </div>
   );
 }
-
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem("authToken"));
   const [userRole, setUserRole] = useState<UserRole>(
