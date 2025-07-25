@@ -2,31 +2,38 @@
 import React from "react";
 import UserSection from "../features/users/UserSection";
 import WikiSection from "../features/wiki/WikiSection";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 type SectionType = "docs" | "profile" | "users" | "admin";
 
-const MainPage = ({
-  token,
-  userRole,
-  user,
-  handleLogout
-}: {
+interface User {
+  firstName: string;
+  lastName: string;
+  department: { id: number; name: string } | null;
+}
+
+interface MainPageProps {
   token: string;
   userRole: string | null;
-  user: {
-    firstName: string;
-    lastName: string;
-    department: { id: number; name: string } | null;
-  } | null;
+  user: User | null;
   handleLogout: () => void;
-}) => {
+}
+
+const MainPage: React.FC<MainPageProps> = ({ token, userRole, user, handleLogout }) => {
   const [section, setSection] = React.useState<SectionType>("docs");
   const navigate = useNavigate();
 
-  const goToDepartment = () => {
+  // Обработчик перехода в отдел с возможностью предотвратить переход по ссылке
+  const goToDepartment = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
     if (user?.department?.id) {
-      navigate(`/department/${user.department.id}`);
+      console.log(`Navigating to /department/${user.department.id}`);
+      navigate(`/department/${user.department.id}`, { replace: true });
+
+      // Если нужно, можно раскомментировать перезагрузку страницы для отладки:
+      // window.location.reload();
+    } else {
+      console.warn("No department ID available for navigation");
     }
   };
 
@@ -34,7 +41,6 @@ const MainPage = ({
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm p-4 mb-4 flex items-center">
         <div className="flex gap-4">
-          {/* Кнопка Документы видна всем */}
           <button
             onClick={() => setSection("docs")}
             className={`px-3 py-2 rounded ${
@@ -44,7 +50,6 @@ const MainPage = ({
             Документы
           </button>
 
-          {/* Кнопка Пользователи видна только админу */}
           {userRole === "admin" && (
             <button
               onClick={() => setSection("users")}
@@ -65,7 +70,6 @@ const MainPage = ({
             Профиль
           </button>
 
-          {/* Кнопка Админ-панель видна только админу */}
           {userRole === "admin" && (
             <button
               onClick={() => setSection("admin")}
@@ -79,24 +83,25 @@ const MainPage = ({
         </div>
 
         <div className="ml-auto flex items-center gap-4">
-          {user && (
+          {user ? (
             <>
               <div className="font-semibold">
                 {user.firstName} {user.lastName}
               </div>
               {user.department ? (
-                <button
+                <Link
+                  to={`/department/${user.department.id}`}
                   onClick={goToDepartment}
                   className="text-blue-600 underline hover:text-blue-800"
                   title={`Перейти в отдел: ${user.department.name}`}
                 >
                   {user.department.name}
-                </button>
+                </Link>
               ) : (
                 <div className="text-gray-500 italic">Без отдела</div>
               )}
             </>
-          )}
+          ) : null}
 
           <button
             onClick={handleLogout}
@@ -109,22 +114,14 @@ const MainPage = ({
 
       <div className="container mx-auto p-4">
         {section === "docs" && <WikiSection />}
-
         {section === "profile" && <UserSection type="profile" token={token} />}
-
-        {/* Показываем "Пользователи" ТОЛЬКО если админ */}
-        {section === "users" && userRole === "admin" && (
-          <UserSection type="userList" token={token} />
-        )}
-
-        {/* Показываем админ-панель ТОЛЬКО если админ */}
-        {section === "admin" && userRole === "admin" && (
-          <UserSection type="admin" token={token} />
-        )}
+        {section === "users" && userRole === "admin" && <UserSection type="userList" token={token} />}
+        {section === "admin" && userRole === "admin" && <UserSection type="admin" token={token} />}
       </div>
     </div>
   );
 };
 
 export default MainPage;
+
 

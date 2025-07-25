@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.83.0",
     "chalk": "^4.1.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.0",

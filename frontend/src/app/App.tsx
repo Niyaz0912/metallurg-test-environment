@@ -15,6 +15,7 @@ function App() {
   } | null>(null);
 
   const handleLogin = useCallback((token: string, responseData: any) => {
+    console.log('Login response:', responseData); // Логирование данных входа
     if (!token || !responseData?.user?.role) {
       console.error('Invalid login response');
       return;
@@ -24,6 +25,13 @@ function App() {
     localStorage.setItem("userRole", responseData.user.role);
     setToken(token);
     setUserRole(responseData.user.role);
+    
+    // Устанавливаем данные пользователя сразу после входа
+    setUser({
+      firstName: responseData.user.firstName,
+      lastName: responseData.user.lastName,
+      department: responseData.user.department || null,
+    });
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -40,6 +48,7 @@ function App() {
 
     const checkAuth = async () => {
       try {
+        console.log('Checking auth with token:', token); // Логирование токена
         const response = await fetch("http://localhost:3001/api/users/me", {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -47,9 +56,13 @@ function App() {
           }
         });
 
-        if (!response.ok) throw new Error('Auth check failed');
+        if (!response.ok) {
+          console.error('Auth check failed with status:', response.status);
+          throw new Error('Auth check failed');
+        }
 
         const data = await response.json();
+        console.log('User data received:', data); // Логирование данных пользователя
 
         if (!isMounted) return;
 
@@ -64,6 +77,7 @@ function App() {
           department: data.department || null,
         });
       } catch (error) {
+        console.error('Auth check error:', error);
         handleLogout();
       }
     };
@@ -91,7 +105,17 @@ function App() {
             />
           }
         />
-        <Route path="/department/:departmentId" element={<DepartmentPortal />} />
+        <Route 
+          path="/department/:departmentId" 
+          element={
+            user?.department ? (
+              <DepartmentPortal />
+            ) : (
+              <Navigate to="/" />
+            )
+          } 
+        />
+         <Route path="/department/:departmentId" element={<DepartmentPortal />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
@@ -99,5 +123,4 @@ function App() {
 }
 
 export default App;
-
 

@@ -1,40 +1,43 @@
-import React, { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { DepartmentSwitcher } from './components/DepartmentSwitcher';
+// src/features/departments/DepartmentPortal.tsx
+import React from 'react';
+import { useParams, Navigate } from 'react-router-dom';
+import { useAuth } from '../auth/hooks/useAuth';
+import AdministrativeMain from './sections/Administrative/AdministrativeMain';
+import QualityMain from './sections/Quality/QualityMain';
+import HRMain from './sections/HR/HRMain';
+import CommercialMain from './sections/Commercial/CommercialMain';
+import ProductionMain from './sections/Production/ProductionMain';
+import FinancialMain from './sections/Financial/FinancialMain';
 
 const DepartmentPortal = () => {
-  const { departmentId } = useParams();
-  const userDepartmentId = localStorage.getItem('departmentId');
-  const userRole = localStorage.getItem('userRole');
-  const navigate = useNavigate();
+  const { departmentId } = useParams<{ departmentId: string }>();
+  const { user } = useAuth();
 
-  useEffect(() => {
-    if (userRole !== 'admin' && departmentId !== userDepartmentId) {
-      navigate(`/department/${userDepartmentId}`);
-    }
-  }, [departmentId, userDepartmentId, userRole, navigate]);
+  if (!departmentId || !user) {
+    return <Navigate to="/" />;
+  }
 
-  const departmentNames: Record<string, string> = {
-    '1': 'Административный департамент',
-    '2': 'Департамент качества',
-    '3': 'Департамент персонала',
-    '4': 'Коммерческий департамент',
-    '5': 'Производственный департамент',
-    '6': 'Финансовый департамент',
+  // Проверка доступа
+  if (user.department?.id.toString() !== departmentId && user.role !== 'admin') {
+    return <Navigate to="/" />;
+  }
+
+  const departmentComponents: Record<string, React.FC> = {
+    '1': AdministrativeMain,
+    '2': QualityMain,
+    '3': HRMain,
+    '4': CommercialMain,
+    '5': ProductionMain,
+    '6': FinancialMain
   };
 
-  return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded shadow mt-6">
-      <div className="flex justify-between items-start mb-6">
-        <h1 className="text-3xl font-bold">
-          Портал отдела: {departmentNames[departmentId || ''] || departmentId}
-        </h1>
-        <DepartmentSwitcher />
-      </div>
+  const DepartmentComponent = departmentComponents[departmentId];
 
-      {/* Остальное содержимое портала */}
-    </div>
-  );
+  if (!DepartmentComponent) {
+    return <div>Департамент не найден</div>;
+  }
+
+  return <DepartmentComponent />;
 };
 
 export default DepartmentPortal;
