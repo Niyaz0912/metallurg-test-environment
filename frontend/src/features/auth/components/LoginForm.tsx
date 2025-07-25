@@ -17,7 +17,7 @@ interface LoginResponse {
 }
 
 interface Props {
-  onLogin: (token: string, role: string, departmentId: string) => void;
+  onLogin: (token: string, responseData: LoginResponse) => void; 
 }
 
 const LoginForm: React.FC<Props> = ({ onLogin }) => {
@@ -33,69 +33,43 @@ const LoginForm: React.FC<Props> = ({ onLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setError('');
+  
   if (!formData.username || !formData.password) {
     setError('Все поля обязательны для заполнения');
     return;
   }
+
   setIsLoading(true);
+  
   try {
-    const apiUrl = `http://127.0.0.1:3001/api/users/login?t=${Date.now()}`;
-    const response = await fetch(apiUrl, {
+    const response = await fetch("http://localhost:3001/api/users/login", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Accept: 'application/json',
       },
       body: JSON.stringify(formData),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      try {
-        const errorData = JSON.parse(errorText);
-        throw new Error(errorData.error || errorData.message || `Ошибка ${response.status}`);
-      } catch {
-        throw new Error(errorText || `Ошибка ${response.status}`);
-      }
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Ошибка входа');
     }
 
-    const contentType = response.headers.get('content-type');
-    if (!contentType?.includes('application/json')) {
-      throw new Error('Сервер вернул данные в неожиданном формате');
+    const data = await response.json();
+    
+    if (!data.token) {
+      throw new Error('Токен не получен');
     }
 
-    const data: LoginResponse = await response.json();
-
-    if (!data.token) throw new Error('Токен не получен');
-    if (!data.user) throw new Error('Данные пользователя отсутствуют в ответе');
-
-    // Вот тут добавляем лог для отладки
-    const depId = data.user.department && data.user.department.id ? String(data.user.department.id) : '0';
-    console.log("Login data:", { token: data.token, role: data.user.role, depId });
-
-    onLogin(data.token, data.user.role, depId);
-
+    onLogin(data.token, data);
+    
   } catch (err) {
-    let errorMessage = 'Ошибка при входе в систему';
-    if (err instanceof Error) {
-      if (
-        err.message.startsWith('<!DOCTYPE') ||
-        err.message.startsWith('<html') ||
-        err.message.includes('<!doctype html>')
-      ) {
-        errorMessage =
-          'Сервер вернул HTML страницу. Проверьте:\n1. Правильность URL API\n2. Запущен ли сервер backend\n3. Настройки CORS на сервере';
-      } else {
-        errorMessage = err.message;
-      }
-    }
-    setError(errorMessage);
-    console.error('Ошибка входа:', err);
+    const message = err instanceof Error ? err.message : 'Ошибка при входе';
+    setError(message);
   } finally {
     setIsLoading(false);
   }
 };
-
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
