@@ -5,6 +5,7 @@ const { validationResult } = require('express-validator');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
+
 // Получить всех пользователей (только для админа)
 exports.getAllUsers = async (req, res) => {
   try {
@@ -23,6 +24,7 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
+
 exports.register = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -30,7 +32,9 @@ exports.register = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
+
     const { username, password, firstName, lastName, role, phone, masterId, departmentId } = req.body;
+
 
     // Проверка существования отдела
     const department = await db.Department.findByPk(departmentId);
@@ -38,14 +42,17 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Указанный отдел не существует' });
     }
 
+
     // Проверка существования пользователя
     const existingUser = await db.User.findOne({ where: { username } });
     if (existingUser) {
       return res.status(400).json({ message: 'Пользователь с таким именем уже существует' });
     }
 
+
     // Хэширование пароля
     const passwordHash = await bcrypt.hash(password, 10);
+
 
     // Создание пользователя
     const user = await db.User.create({
@@ -59,14 +66,17 @@ exports.register = async (req, res) => {
       departmentId
     });
 
+
     // Не возвращаем хэш пароля в ответе
     const userResponse = user.get({ plain: true });
     delete userResponse.passwordHash;
+
 
     res.status(201).json({
       message: 'Пользователь успешно зарегистрирован',
       user: userResponse
     });
+
 
   } catch (error) {
     console.error('Ошибка регистрации:', error);
@@ -77,10 +87,12 @@ exports.register = async (req, res) => {
   }
 };
 
+
 // Логин
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
+
 
     const user = await db.User.scope('withPassword').findOne({
       where: { username },
@@ -91,36 +103,36 @@ exports.login = async (req, res) => {
       }
     });
 
+
     if (!user) {
       return res.status(400).json({ message: 'Неверный логин или пароль' });
     }
+
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
       return res.status(400).json({ message: 'Неверный логин или пароль' });
     }
 
+
     // Формируем JWT с position
     const token = jwt.sign(
       {
-        userId: user.id,
-        role: user.role,
-        departmentId: user.departmentId,
-        position: user.position  // добавили должность
+        userId: user.id // ✅ Теперь только ID
       },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
 
-    // Отдаем token и данные пользователя с position
+
     res.json({
       token,
       user: {
         id: user.id,
         username: user.username,
-        role: user.role,
+        role: user.role, // Отдаём роль отдельно
         department: user.department,
-        position: user.position  // добавлено поле должности в ответ
+        position: user.position
       }
     });
   } catch (e) {
@@ -129,10 +141,11 @@ exports.login = async (req, res) => {
   }
 };
 
+
 // Получить информацию о текущем пользователе
 exports.getMe = async (req, res) => {
   try {
-    const user = await db.User.findByPk(req.user.userId, { 
+    const user = await db.User.findByPk(req.user.id, {
       attributes: { exclude: ['passwordHash'] },
       include: {
         model: db.Department,
@@ -140,17 +153,18 @@ exports.getMe = async (req, res) => {
         attributes: ['id', 'name']
       }
     });
-    
+
     if (!user) {
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
-    
+
     res.json(user);
   } catch (e) {
     console.error('Get me error:', e);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
+
 
 // Получение профиля (требуется авторизация)
 exports.getProfile = async (req, res) => {
@@ -159,12 +173,14 @@ exports.getProfile = async (req, res) => {
     const user = await db.User.findByPk(userId, { attributes: { exclude: ['passwordHash'] } });
     if (!user) return res.status(404).json({ message: 'Пользователь не найден' });
 
+
     res.json(user);
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
+
 
 // Запрос на доступ (отправка письма)
 exports.requestAccess = async (req, res) => {
@@ -173,6 +189,7 @@ exports.requestAccess = async (req, res) => {
     if (!fullName || !employeeId || !contact) {
       return res.status(400).json({ message: 'Пожалуйста, заполните все поля' });
     }
+
 
     // Настройка Nodemailer (используйте реальные SMTP данные!)
     const transporter = nodemailer.createTransport({
@@ -184,6 +201,7 @@ exports.requestAccess = async (req, res) => {
       },
     });
 
+
     const mailOptions = {
       from: process.env.SMTP_USER,
       to: process.env.IT_SUPPORT_EMAIL,
@@ -191,7 +209,9 @@ exports.requestAccess = async (req, res) => {
       text: `Детали запроса:\n\nФИО: ${fullName}\nТабельный номер: ${employeeId}\nКонтактные данные: ${contact}\n\nДата запроса: ${new Date().toLocaleString()}`,
     };
 
+
     await transporter.sendMail(mailOptions);
+
 
     res.json({ message: 'Ваш запрос отправлен. С вами свяжутся в ближайшее время.' });
   } catch (e) {
@@ -199,6 +219,7 @@ exports.requestAccess = async (req, res) => {
     res.status(500).json({ message: 'Ошибка при отправке запроса' });
   }
 };
+
 
 // Удаление пользователя (только для админа)
 exports.deleteUser = async (req, res) => {
@@ -212,4 +233,53 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
+
+
+// Обновление пользователя (только для админа)
+exports.updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    // Только админ может менять роли
+    if (req.user.currentRole !== 'admin') {
+      return res.status(403).json({ message: 'Доступ запрещён' });
+    }
+
+    await db.User.update({ role }, { where: { id } });
+    res.json({ message: 'Роль обновлена' });
+  } catch (e) {
+    console.error('Update user error:', e);
+    res.status(500).json({ message: 'Ошибка сервера' });
+  }
+};
+
+// В userController.js
+exports.updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    // Проверяем валидность роли
+    const validRoles = ['employee', 'master', 'director', 'admin'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ message: 'Недопустимая роль' });
+    }
+
+    const [updated] = await db.User.update(
+      { role },
+      { where: { id } }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
+    }
+
+    res.json({ message: 'Роль успешно обновлена' });
+  } catch (e) {
+    console.error('Update role error:', e);
+    res.status(500).json({ message: 'Ошибка сервера' });
+  }
+};
+
 
