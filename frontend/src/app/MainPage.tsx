@@ -23,18 +23,10 @@ const MainPage: React.FC<MainPageProps> = ({ token, userRole, user, handleLogout
   const [section, setSection] = React.useState<SectionType>("docs");
   const navigate = useNavigate();
 
-  // Обработчик перехода в отдел с возможностью предотвратить переход по ссылке
-  const goToDepartment = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  // Упрощенный обработчик перехода в отдел
+  const handleDepartmentClick = (e: React.MouseEvent, departmentId: number) => {
     e.preventDefault();
-    if (user?.department?.id) {
-      console.log(`Navigating to /department/${user.department.id}`);
-      navigate(`/department/${user.department.id}`, { replace: true });
-
-      // Если нужно, можно раскомментировать перезагрузку страницы для отладки:
-      // window.location.reload();
-    } else {
-      console.warn("No department ID available for navigation");
-    }
+    navigate(`/department/${departmentId}`);
   };
 
   return (
@@ -83,7 +75,7 @@ const MainPage: React.FC<MainPageProps> = ({ token, userRole, user, handleLogout
         </div>
 
         <div className="ml-auto flex items-center gap-4">
-          {user ? (
+          {user && (
             <>
               <div className="font-semibold">
                 {user.firstName} {user.lastName}
@@ -91,7 +83,7 @@ const MainPage: React.FC<MainPageProps> = ({ token, userRole, user, handleLogout
               {user.department ? (
                 <Link
                   to={`/department/${user.department.id}`}
-                  onClick={goToDepartment}
+                  onClick={(e) => handleDepartmentClick(e, user.department!.id)}
                   className="text-blue-600 underline hover:text-blue-800"
                   title={`Перейти в отдел: ${user.department.name}`}
                 >
@@ -101,7 +93,7 @@ const MainPage: React.FC<MainPageProps> = ({ token, userRole, user, handleLogout
                 <div className="text-gray-500 italic">Без отдела</div>
               )}
             </>
-          ) : null}
+          )}
 
           <button
             onClick={handleLogout}

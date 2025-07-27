@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AuthSection from "../features/auth/AuthSection";
 import MainPage from "./MainPage";
-import DepartmentPortal from '../features/departments/DepartmentPortal';
+import { DepartmentPortal } from '../features/departments/DepartmentPortal';
 
 function App() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("authToken"));
@@ -30,7 +30,12 @@ function App() {
     setUser({
       firstName: responseData.user.firstName,
       lastName: responseData.user.lastName,
-      department: responseData.user.department || null,
+      department: responseData.user?.department 
+  ? { 
+      id: responseData.user.department.id, 
+      name: responseData.user.department.name 
+    }
+  : null,
     });
   }, []);
 
@@ -91,34 +96,33 @@ function App() {
     return <AuthSection onLogin={handleLogin} />;
   }
 
+  if (token && !user) {
+  return <div>Загрузка данных пользователя...</div>;
+  }
+  
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <MainPage
-              token={token}
-              userRole={userRole}
-              user={user}
-              handleLogout={handleLogout}
-            />
-          }
-        />
-        <Route 
-          path="/department/:departmentId" 
-          element={
-            user?.department ? (
-              <DepartmentPortal />
-            ) : (
-              <Navigate to="/" />
-            )
-          } 
-        />
-         <Route path="/department/:departmentId" element={<DepartmentPortal />} />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </BrowserRouter>
+<BrowserRouter>
+  <Routes>
+    <Route path="/" element={
+      <MainPage
+        token={token}
+        userRole={userRole}
+        user={user}
+        handleLogout={handleLogout}
+      />
+    } />
+    
+    {/* Явно указываем, что DepartmentPortal требует аутентификации */}
+    <Route 
+      path="/department/:departmentId" 
+      element={
+        token ? <DepartmentPortal /> : <Navigate to="/" replace />
+      }
+    />
+    
+    <Route path="*" element={<Navigate to="/" replace />} />
+  </Routes>
+</BrowserRouter>
   );
 }
 

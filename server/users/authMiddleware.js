@@ -1,20 +1,40 @@
 // users/authMiddleware.js
 const jwt = require('jsonwebtoken');
+const db = require('../models');
 
 // Middleware для проверки аутентификации
-const authMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  
-  if (!token) {
-    return res.status(401).json({ 
-      error: 'Unauthorized',
-      message: 'No token provided' 
-    });
-  }
-
+const authMiddleware = async (req, res, next) => {
   try {
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ 
+        error: 'Unauthorized',
+        message: 'No token provided' 
+      });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    
+    // Проверяем существование пользователя в БД
+    const user = await db.User.findByPk(decoded.userId, {
+      attributes: ['id', 'role', 'departmentId'] // Загружаем только нужные поля
+    });
+    
+    if (!user) {
+      return res.status(401).json({ 
+        error: 'Unauthorized',
+        message: 'User not found' 
+      });
+    }
+
+    // Добавляем полную информацию о пользователе
+    req.user = {
+      userId: user.id,
+      role: user.role,
+      departmentId: user.departmentId
+    };
+    
     next();
   } catch (err) {
     return res.status(401).json({ 

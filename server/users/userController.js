@@ -145,26 +145,46 @@ exports.login = async (req, res) => {
 // Получить информацию о текущем пользователе
 exports.getMe = async (req, res) => {
   try {
-    const user = await db.User.findByPk(req.user.id, {
-      attributes: { exclude: ['passwordHash'] },
-      include: {
+    const user = await db.User.findByPk(req.user.userId, {
+      attributes: ['id', 'firstName', 'lastName', 'role', 'position', 'departmentId'],
+      include: [{
         model: db.Department,
-        as: 'department',
-        attributes: ['id', 'name']
-      }
+        as: 'department', // Должно совпадать с ассоциацией в модели
+        attributes: ['id', 'name'],
+        required: false // LEFT JOIN вместо INNER JOIN
+      }]
     });
 
     if (!user) {
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
 
-    res.json(user);
-  } catch (e) {
-    console.error('Get me error:', e);
+    // Проверка данных
+    console.log('Department data:', {
+      dbDepartmentId: user.departmentId,
+      includedDepartment: user.department
+    });
+
+    // Формируем гарантированно правильную структуру ответа
+    const response = {
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        position: user.position,
+        department: user.department 
+          ? { id: user.department.id, name: user.department.name }
+          : null
+      }
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('GetMe error:', error);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
-
 
 // Получение профиля (требуется авторизация)
 exports.getProfile = async (req, res) => {
