@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../auth/hooks/useAuth';
 
 import AdministrativeMain from './sections/Administrative/AdministrativeMain';
 import QualityMain from './sections/Quality/QualityMain';
@@ -20,9 +19,19 @@ const departmentComponents = {
 
 type DepartmentId = keyof typeof departmentComponents;
 
-export const DepartmentPortal: React.FC = () => {
+interface User {
+  firstName: string;
+  lastName: string;
+  role?: string;
+  department?: { id: number; name: string } | null;
+}
+
+interface DepartmentPortalProps {
+  user: User | null;
+}
+
+export const DepartmentPortal: React.FC<DepartmentPortalProps> = ({ user }) => {
   const { departmentId } = useParams<{ departmentId?: string }>();
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const isValidDepartment = (id: string | undefined): id is DepartmentId => {
@@ -51,7 +60,6 @@ export const DepartmentPortal: React.FC = () => {
   }
 
   if (!isValidDepartment(departmentId)) {
-    // Можно выводить null или загрузочный экран, пока редирект сработает
     return null;
   }
 
@@ -70,3 +78,4 @@ export const DepartmentPortal: React.FC = () => {
 };
 
 export default DepartmentPortal;
+

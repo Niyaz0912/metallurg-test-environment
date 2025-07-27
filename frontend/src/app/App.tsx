@@ -7,7 +7,7 @@ import { DepartmentPortal } from '../features/departments/DepartmentPortal';
 function App() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("authToken"));
   const [userRole, setUserRole] = useState<string | null>(() => localStorage.getItem("userRole"));
-  
+
   const [user, setUser] = useState<{
     firstName: string;
     lastName: string;
@@ -15,7 +15,7 @@ function App() {
   } | null>(null);
 
   const handleLogin = useCallback((token: string, responseData: any) => {
-    console.log('Login response:', responseData); // Логирование данных входа
+    console.log('Login response:', responseData);
     if (!token || !responseData?.user?.role) {
       console.error('Invalid login response');
       return;
@@ -25,17 +25,15 @@ function App() {
     localStorage.setItem("userRole", responseData.user.role);
     setToken(token);
     setUserRole(responseData.user.role);
-    
-    // Устанавливаем данные пользователя сразу после входа
+
+    // Убедитесь, что department правильно извлекается
     setUser({
       firstName: responseData.user.firstName,
       lastName: responseData.user.lastName,
-      department: responseData.user?.department 
-  ? { 
-      id: responseData.user.department.id, 
-      name: responseData.user.department.name 
-    }
-  : null,
+      department: responseData.user.departmentId ? {
+        id: responseData.user.departmentId,
+        name: responseData.user.departmentName || `Отдел ${responseData.user.departmentId}`
+      } : null
     });
   }, []);
 
@@ -77,10 +75,11 @@ function App() {
         }
 
         setUser({
-          firstName: data.firstName,
-          lastName: data.lastName,
-          department: data.department || null,
+          firstName: data.user.firstName,
+          lastName: data.user.lastName,
+          department: data.user.department || null,
         });
+
       } catch (error) {
         console.error('Auth check error:', error);
         handleLogout();
@@ -97,32 +96,32 @@ function App() {
   }
 
   if (token && !user) {
-  return <div>Загрузка данных пользователя...</div>;
+    return <div>Загрузка данных пользователя...</div>;
   }
-  
+
   return (
-<BrowserRouter>
-  <Routes>
-    <Route path="/" element={
-      <MainPage
-        token={token}
-        userRole={userRole}
-        user={user}
-        handleLogout={handleLogout}
-      />
-    } />
-    
-    {/* Явно указываем, что DepartmentPortal требует аутентификации */}
-    <Route 
-      path="/department/:departmentId" 
-      element={
-        token ? <DepartmentPortal /> : <Navigate to="/" replace />
-      }
-    />
-    
-    <Route path="*" element={<Navigate to="/" replace />} />
-  </Routes>
-</BrowserRouter>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={
+          <MainPage
+            token={token}
+            userRole={userRole}
+            user={user}
+            handleLogout={handleLogout}
+          />
+        } />
+
+        {/* Явно указываем, что DepartmentPortal требует аутентификации */}
+        <Route
+          path="/department/:departmentId"
+          element={
+            token ? <DepartmentPortal user={user} /> : <Navigate to="/" replace />
+          }
+        />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
