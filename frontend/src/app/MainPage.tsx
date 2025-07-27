@@ -1,15 +1,20 @@
-// src/app/MainPage.tsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import UserSection from "../features/users/UserSection";
 import WikiSection from "../features/wiki/WikiSection";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 type SectionType = "docs" | "profile" | "users" | "admin";
+
+interface Department {
+  id: number;
+  name: string;
+}
 
 interface User {
   firstName: string;
   lastName: string;
-  department: { id: number; name: string } | null;
+  department: Department | null;
+  role?: string | null;
 }
 
 interface MainPageProps {
@@ -20,13 +25,39 @@ interface MainPageProps {
 }
 
 const MainPage: React.FC<MainPageProps> = ({ token, userRole, user, handleLogout }) => {
-  const [section, setSection] = React.useState<SectionType>("docs");
+  const [section, setSection] = useState<SectionType>("docs");
+  const [departments, setDepartments] = useState<Department[]>([]);
   const navigate = useNavigate();
 
-  // Упрощенный обработчик перехода в отдел
-  const handleDepartmentClick = (e: React.MouseEvent, departmentId: number) => {
-    e.preventDefault();
-    navigate(`/department/${departmentId}`);
+  // Загрузка списка департаментов для админа
+  useEffect(() => {
+    if (userRole === "admin") {
+      fetch("http://localhost:3001/api/departments")
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error(`Ошибка загрузки департаментов: ${res.status}`);
+          }
+          return res.json();
+        })
+        .then((data: Department[]) => setDepartments(data))
+        .catch((err) => {
+          console.error(err);
+          setDepartments([]);
+        });
+    }
+  }, [userRole]);
+
+  const handleDepartmentClick = () => {
+    if (user?.department) {
+      navigate(`/department/${user.department.id}`);
+    }
+  };
+
+  const handleSelectDepartment = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedId = e.target.value;
+    if (selectedId) {
+      navigate(`/department/${selectedId}`);
+    }
   };
 
   return (
@@ -80,15 +111,31 @@ const MainPage: React.FC<MainPageProps> = ({ token, userRole, user, handleLogout
               <div className="font-semibold">
                 {user.firstName} {user.lastName}
               </div>
-              {user.department ? (
-                <Link
-                  to={`/department/${user.department.id}`}
-                  onClick={(e) => handleDepartmentClick(e, user.department!.id)}
-                  className="text-blue-600 underline hover:text-blue-800"
+
+              {userRole === "admin" ? (
+                <select
+                  onChange={handleSelectDepartment}
+                  defaultValue=""
+                  className="border rounded px-2 py-1 cursor-pointer"
+                  title="Выберите департамент"
+                >
+                  <option value="" disabled>
+                    Выберите департамент
+                  </option>
+                  {departments.map((dep) => (
+                    <option key={dep.id} value={dep.id}>
+                      {dep.name}
+                    </option>
+                  ))}
+                </select>
+              ) : user.department ? (
+                <button
+                  onClick={handleDepartmentClick}
+                  className="text-blue-600 underline hover:text-blue-800 bg-transparent border-none cursor-pointer p-0"
                   title={`Перейти в отдел: ${user.department.name}`}
                 >
                   {user.department.name}
-                </Link>
+                </button>
               ) : (
                 <div className="text-gray-500 italic">Без отдела</div>
               )}
@@ -115,5 +162,6 @@ const MainPage: React.FC<MainPageProps> = ({ token, userRole, user, handleLogout
 };
 
 export default MainPage;
+
 
 

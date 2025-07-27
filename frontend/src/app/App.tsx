@@ -12,7 +12,10 @@ function App() {
     firstName: string;
     lastName: string;
     department: { id: number; name: string } | null;
+    role?: string | null;
+
   } | null>(null);
+
 
   const handleLogin = useCallback((token: string, responseData: any) => {
     console.log('Login response:', responseData);
@@ -78,6 +81,7 @@ function App() {
           firstName: data.user.firstName,
           lastName: data.user.lastName,
           department: data.user.department || null,
+          role: data.user.role,
         });
 
       } catch (error) {
