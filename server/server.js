@@ -36,7 +36,7 @@ async function startServer() {
     console.log('✅ Database connection established');
     
     if (process.env.NODE_ENV === 'development') {
-      await db.sequelize.sync({ alter: true });
+      // await db.sequelize.sync({ alter: true });
       console.log('🔄 Database models synced');
     }
 

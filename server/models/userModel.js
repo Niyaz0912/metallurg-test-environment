@@ -70,7 +70,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }, {
     tableName: 'users',
-    indexes: [{ unique: true, fields: ['username'] }],
+    indexes: [],
     defaultScope: {
       attributes: { exclude: ['passwordHash'] }
     },
