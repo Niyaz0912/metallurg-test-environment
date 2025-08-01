@@ -104,7 +104,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={
+        <Route path="*" element={
           <MainPage
             token={token}
             userRole={userRole}
@@ -121,7 +121,6 @@ function App() {
         <Route path="/assignments" element={token ? <AssignmentList /> : <Navigate to="/" replace />} />
         <Route path="/assignments/new" element={token ? <AssignmentForm /> : <Navigate to="/" replace />} />
 
-        <Route path="/production-plans" element={token ? <ProductionPlanList /> : <Navigate to="/" replace />} />
         <Route path="/production-plans/new" element={token ? <ProductionPlanForm /> : <Navigate to="/" replace />} />
 
         <Route path="/tasks" element={token ? <TaskList /> : <Navigate to="/" replace />} />
@@ -130,7 +129,15 @@ function App() {
         <Route path="/tech-cards" element={token ? <TechCardList /> : <Navigate to="/" replace />} />
         <Route path="/tech-cards/new" element={token ? <TechCardForm /> : <Navigate to="/" replace />} />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={
+          <MainPage
+            token={token}
+            userRole={userRole}
+            user={user}
+            handleLogout={handleLogout}
+          />
+        } />
+
       </Routes>
     </BrowserRouter>
   );

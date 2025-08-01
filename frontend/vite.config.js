@@ -14,4 +14,8 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
   },
+  build: {
+    sourcemap: true,  // включить генерацию source map для продакшен-билда и дев-сервера
+  }
 });
+

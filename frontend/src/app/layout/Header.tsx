@@ -1,37 +1,74 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { NavLink, Link } from 'react-router-dom';
 
-interface HeaderProps {
-  onMenuClick: () => void;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
-  currentView: string;
-  onBackClick: (() => void) | undefined;
-  breadcrumb: string;
+interface User {
+  firstName: string;
+  lastName: string;
+  department?: { id: number; name: string } | null;
 }
 
-const Header: React.FC<HeaderProps> = ({ onMenuClick, searchQuery, onSearchChange, currentView, onBackClick, breadcrumb }) => {
+interface HeaderProps {
+  user: User | null;
+  onLogout: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
-    <header className='bg-white shadow p-4 flex items-center justify-between'>
-      <div className='flex items-center'>
-        <button onClick={onMenuClick} className='lg:hidden text-gray-600 mr-4'>
-          <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M4 6h16M4 12h16m-7 6h7'></path></svg>
-        </button>
-        {onBackClick && (
-          <button onClick={onBackClick} className='text-gray-600 mr-4'>
-            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M10 19l-7-7m0 0l7-7m-7 7h18'></path></svg>
-          </button>
+    <header className="bg-white shadow p-4 flex items-center justify-between">
+      <nav className="flex items-center space-x-6">
+        <NavLink 
+          to="/documents" 
+          className={({ isActive }) => isActive ? 'text-blue-600 font-semibold' : 'text-gray-700 hover:text-blue-600'}
+          onClick={() => setMenuOpen(false)}
+        >
+          Документы
+        </NavLink>
+        <NavLink 
+          to="/profile" 
+          className={({ isActive }) => isActive ? 'text-blue-600 font-semibold' : 'text-gray-700 hover:text-blue-600'}
+          onClick={() => setMenuOpen(false)}
+        >
+          Профиль
+        </NavLink>
+        <NavLink 
+          to="/production-plans" 
+          className={({ isActive }) => isActive ? 'text-blue-600 font-semibold' : 'text-gray-700 hover:text-blue-600'}
+          onClick={() => setMenuOpen(false)}
+        >
+          План производства
+        </NavLink>
+      </nav>
+
+      <div className="flex items-center space-x-4">
+        {user && (
+          <>
+            <div className="text-gray-700 font-medium flex items-center space-x-2">
+              <span>{user.firstName} {user.lastName}</span>
+              {user.department ? (
+                <Link
+                  to={`/department/${user.department.id}`}
+                  className="text-blue-600 underline hover:text-blue-800"
+                  title={`Перейти в отдел: ${user.department.name}`}
+                >
+                  ({user.department.name})
+                </Link>
+              ) : null}
+            </div>
+            <button 
+              onClick={onLogout} 
+              className="text-red-600 hover:text-red-800 border border-red-600 rounded px-3 py-1 text-sm"
+              title="Выйти"
+            >
+              Выйти
+            </button>
+          </>
         )}
-        <h1 className='text-xl font-bold text-gray-800'>{breadcrumb || 'Библиотека регламентов'}</h1>
       </div>
-      <input
-        type='text'
-        placeholder='Поиск...'
-        className='px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-        value={searchQuery}
-        onChange={(e) => onSearchChange(e.target.value)}
-      />
     </header>
   );
 };
 
 export default Header;
+
