@@ -3,7 +3,12 @@ import UserSection from "../features/users/UserSection";
 import WikiSection from "../features/wiki/WikiSection";
 import { useNavigate } from "react-router-dom";
 
-type SectionType = "docs" | "profile" | "users" | "admin";
+import { AssignmentList } from "../features/assignments";
+import { ProductionPlanList } from "../features/productionPlans";
+import { TaskList } from "../features/tasks";
+import { TechCardList } from "../features/techCard";
+
+type SectionType = "docs" | "profile" | "users" | "admin" | "assignments" | "productionPlans" | "tasks" | "techCards";
 
 interface Department {
   id: number;
@@ -103,6 +108,43 @@ const MainPage: React.FC<MainPageProps> = ({ token, userRole, user, handleLogout
               Админ-панель
             </button>
           )}
+
+          {/* Новые модули */}
+          <button
+            onClick={() => setSection("assignments")}
+            className={`px-3 py-2 rounded ${
+              section === "assignments" ? "bg-blue-100 text-blue-600" : "hover:bg-gray-100"
+            }`}
+          >
+            Задания
+          </button>
+
+          <button
+            onClick={() => setSection("productionPlans")}
+            className={`px-3 py-2 rounded ${
+              section === "productionPlans" ? "bg-blue-100 text-blue-600" : "hover:bg-gray-100"
+            }`}
+          >
+            План производства
+          </button>
+
+          <button
+            onClick={() => setSection("tasks")}
+            className={`px-3 py-2 rounded ${
+              section === "tasks" ? "bg-blue-100 text-blue-600" : "hover:bg-gray-100"
+            }`}
+          >
+            Задачи
+          </button>
+
+          <button
+            onClick={() => setSection("techCards")}
+            className={`px-3 py-2 rounded ${
+              section === "techCards" ? "bg-blue-100 text-blue-600" : "hover:bg-gray-100"
+            }`}
+          >
+            Технологические карты
+          </button>
         </div>
 
         <div className="ml-auto flex items-center gap-4">
@@ -156,12 +198,18 @@ const MainPage: React.FC<MainPageProps> = ({ token, userRole, user, handleLogout
         {section === "profile" && <UserSection type="profile" token={token} />}
         {section === "users" && userRole === "admin" && <UserSection type="userList" token={token} />}
         {section === "admin" && userRole === "admin" && <UserSection type="admin" token={token} />}
+
+        {section === "assignments" && <AssignmentList />}
+        {section === "productionPlans" && <ProductionPlanList />}
+        {section === "tasks" && <TaskList />}
+        {section === "techCards" && <TechCardList />}
       </div>
     </div>
   );
 };
 
 export default MainPage;
+
 
 
 

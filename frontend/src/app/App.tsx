@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
 import AuthSection from "../features/auth/AuthSection";
 import MainPage from "./MainPage";
 import { DepartmentPortal } from '../features/departments/DepartmentPortal';
+
+import { AssignmentList, AssignmentForm } from "../features/assignments";
+import { ProductionPlanList, ProductionPlanForm } from "../features/productionPlans";
+import { TaskList, TaskForm } from "../features/tasks";
+import { TechCardList, TechCardForm } from "../features/techCard";
 
 function App() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("authToken"));
@@ -13,12 +19,9 @@ function App() {
     lastName: string;
     department: { id: number; name: string } | null;
     role?: string | null;
-
   } | null>(null);
 
-
   const handleLogin = useCallback((token: string, responseData: any) => {
-    console.log('Login response:', responseData);
     if (!token || !responseData?.user?.role) {
       console.error('Invalid login response');
       return;
@@ -29,14 +32,14 @@ function App() {
     setToken(token);
     setUserRole(responseData.user.role);
 
-    // Убедитесь, что department правильно извлекается
     setUser({
       firstName: responseData.user.firstName,
       lastName: responseData.user.lastName,
       department: responseData.user.departmentId ? {
         id: responseData.user.departmentId,
         name: responseData.user.departmentName || `Отдел ${responseData.user.departmentId}`
-      } : null
+      } : null,
+      role: responseData.user.role,
     });
   }, []);
 
@@ -54,7 +57,6 @@ function App() {
 
     const checkAuth = async () => {
       try {
-        console.log('Checking auth with token:', token); // Логирование токена
         const response = await fetch("http://localhost:3001/api/users/me", {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -63,12 +65,10 @@ function App() {
         });
 
         if (!response.ok) {
-          console.error('Auth check failed with status:', response.status);
           throw new Error('Auth check failed');
         }
 
         const data = await response.json();
-        console.log('User data received:', data); // Логирование данных пользователя
 
         if (!isMounted) return;
 
@@ -83,9 +83,7 @@ function App() {
           department: data.user.department || null,
           role: data.user.role,
         });
-
       } catch (error) {
-        console.error('Auth check error:', error);
         handleLogout();
       }
     };
@@ -115,13 +113,22 @@ function App() {
           />
         } />
 
-        {/* Явно указываем, что DepartmentPortal требует аутентификации */}
         <Route
           path="/department/:departmentId"
-          element={
-            token ? <DepartmentPortal user={user} /> : <Navigate to="/" replace />
-          }
+          element={token ? <DepartmentPortal user={user} /> : <Navigate to="/" replace />}
         />
+
+        <Route path="/assignments" element={token ? <AssignmentList /> : <Navigate to="/" replace />} />
+        <Route path="/assignments/new" element={token ? <AssignmentForm /> : <Navigate to="/" replace />} />
+
+        <Route path="/production-plans" element={token ? <ProductionPlanList /> : <Navigate to="/" replace />} />
+        <Route path="/production-plans/new" element={token ? <ProductionPlanForm /> : <Navigate to="/" replace />} />
+
+        <Route path="/tasks" element={token ? <TaskList /> : <Navigate to="/" replace />} />
+        <Route path="/tasks/new" element={token ? <TaskForm /> : <Navigate to="/" replace />} />
+
+        <Route path="/tech-cards" element={token ? <TechCardList /> : <Navigate to="/" replace />} />
+        <Route path="/tech-cards/new" element={token ? <TechCardForm /> : <Navigate to="/" replace />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -130,4 +137,5 @@ function App() {
 }
 
 export default App;
+
 
