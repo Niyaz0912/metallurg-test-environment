@@ -187,19 +187,32 @@ exports.getMe = async (req, res) => {
 };
 
 // Получение профиля (требуется авторизация)
-exports.getProfile = async (req, res) => {
+exports.getProfileWithAssignments = async (req, res) => {
   try {
-    const userId = req.user.userId; // пользователь из middleware аутентификации
+    const userId = req.user.userId;
     const user = await db.User.findByPk(userId, { attributes: { exclude: ['passwordHash'] } });
     if (!user) return res.status(404).json({ message: 'Пользователь не найден' });
 
+    let assignments;
+    if (user.role === 'master') {
+      assignments = await db.Assignment.findAll({
+        include: ['operator', 'techCard']
+      });
+    } else {
+      assignments = await db.Assignment.findAll({
+        where: { operatorId: userId },
+        include: ['techCard']
+      });
+    }
 
-    res.json(user);
+    res.json({ user, assignments });
+
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
+
 
 
 // Запрос на доступ (отправка письма)

@@ -46,7 +46,7 @@ async function startServer() {
 
     // Ваши модули с контроллерами и роутами
     const taskRoutes = require('./tasks');
-    const assignmentRoutes = require('./assignments');
+    const assignmentRoutes = require('./assignments/assignmentRoutes');
     const techCardRoutes = require('./techCards');
     const productionPlanRoutes = require('./productionPlans');
 
