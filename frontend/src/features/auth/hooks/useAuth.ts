@@ -1,7 +1,3 @@
-// src/features/auth/hooks/useAuth.ts
-import { useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+// frontend/src/features/auth/hooks/useAuth.ts
+export { useAuth } from '../context/AuthContext';
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};

@@ -1,46 +1,106 @@
-import React, { useEffect, useState } from 'react';
-import ProductionPlanList from './components/ProductionPlanList'; // проверьте путь
-import { ProductionPlan } from './productionPlansTypes'; // если есть типы
+// src/features/productionPlans/ProductionPlansPage.tsx
+import { useState, useEffect } from 'react';
+import { ProductionPlansList } from './components/ProductionPlanList';
+import { ProductionPlan, CreateProductionPlanData } from './productionPlansTypes';
 
-const ProductionPlanPage: React.FC = () => {
+export const ProductionPlansPage = () => {
   const [plans, setPlans] = useState<ProductionPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  const userRole = 'director';
 
   useEffect(() => {
-    fetch('http://127.0.0.1:3001/api/productionPlans')
-      .then(res => {
-        if (!res.ok) throw new Error(`Ошибка: ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        console.log('Данные с API:', data); // для отладки
-        setPlans(data); // Поскольку API возвращает массив, не data.productionPlans
-      })
-      .catch(err => {
-        console.error(err);
-        setError('Не удалось загрузить планы производства');
-      })
-      .finally(() => setLoading(false));
+    const mockPlans: ProductionPlan[] = [
+      {
+        id: 1,
+        orderName: 'PT-2024-005',
+        customerName: 'АО "ПромТех"',
+        quantity: 300,
+        deadline: '2025-07-24',
+        progressPercent: 0
+      },
+      {
+        id: 2,
+        orderName: 'MS-2023-001',
+        customerName: 'ООО "МеталлСтрой"',
+        quantity: 500,
+        deadline: '2025-07-10',
+        progressPercent: 20
+      },
+      {
+        id: 3,
+        orderName: 'US-2025-007',
+        customerName: 'ЗАО "УралСталь"',
+        quantity: 1000,
+        deadline: '2025-08-05',
+        progressPercent: 60
+      }
+    ];
+    
+    setTimeout(() => {
+      setPlans(mockPlans);
+      setLoading(false);
+    }, 500);
   }, []);
 
-  const handleEdit = (id: number) => {
-    alert(`Редактирование заказа с ID ${id}`);
+  const handleCreatePlan = async (data: CreateProductionPlanData) => {
+    try {
+      const newPlan: ProductionPlan = {
+        id: Date.now(),
+        ...data,
+        progressPercent: 0
+      };
+      
+      setPlans(prev => [...prev, newPlan]);
+    } catch (error) {
+      console.error('Ошибка создания плана:', error);
+    }
   };
 
-  const handleDelete = (id: number) => {
-    alert(`Удаление заказа с ID ${id}`);
+  const handleUpdatePlan = async (id: number, data: CreateProductionPlanData) => {
+    try {
+      setPlans(prev => prev.map(plan => 
+        plan.id === id 
+          ? { ...plan, ...data }
+          : plan
+      ));
+    } catch (error) {
+      console.error('Ошибка обновления плана:', error);
+    }
   };
 
-  if (loading) return <p>Загрузка планов производства...</p>;
-  if (error) return <p>{error}</p>;
+  const handleDeletePlan = async (id: number) => {
+    try {
+      setPlans(prev => prev.filter(plan => plan.id !== id));
+    } catch (error) {
+      console.error('Ошибка удаления плана:', error);
+    }
+  };
+
+  const handleViewPlan = (id: number) => {
+    console.log('Просмотр плана', id);
+    alert(`Переход к детальной странице плана ${id}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <div className="text-lg">Загрузка...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Планы производства</h1>
-      <ProductionPlanList plans={plans} onEdit={handleEdit} onDelete={handleDelete} />
-    </div>
+    <ProductionPlansList
+      plans={plans}
+      userRole={userRole}
+      onCreatePlan={handleCreatePlan}
+      onUpdatePlan={handleUpdatePlan}
+      onDeletePlan={handleDeletePlan}
+      onViewPlan={handleViewPlan}
+    />
   );
 };
 
-export default ProductionPlanPage;
+export default ProductionPlansPage;
+

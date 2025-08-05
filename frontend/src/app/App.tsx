@@ -1,148 +1,95 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+// frontend/src/app/App.tsx
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Header from './layout/Header';
+import SubHeader from './layout/SubHeader';
+import MainPage from './MainPage';
+import AuthSection from '../features/auth/AuthSection';
+import ProductionPlansPage from '../features/productionPlans/ProductionPlanPage';
+import Profile from '../features/users/components/Profile';
+import WikiSection from '../features/wiki/WikiSection';
+import DepartmentPortal from '../features/departments/DepartmentPortal';
+import AdminPanel from '../features/users/AdminPanel';
+import PrivateRoute from './PrivateRoute';
+import AutoRedirect from './AutoRedirect';
+import { useAuth } from '../features/auth/hooks/useAuth';
 
-import AuthSection from "../features/auth/AuthSection";
-import MainPage from "./MainPage";
-import { DepartmentPortal } from '../features/departments/DepartmentPortal';
+const AppContent: React.FC = () => {
+  const { user, loading, login } = useAuth();
 
-import { AssignmentList, AssignmentForm } from "../features/assignments";
-import { ProductionPlanList, ProductionPlanForm } from "../features/productionPlans";
-import { TaskList, TaskForm } from "../features/tasks";
-import { TechCardList, TechCardForm } from "../features/techCard";
-
-function App() {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("authToken"));
-  const [userRole, setUserRole] = useState<string | null>(() => localStorage.getItem("userRole"));
-
-  const [user, setUser] = useState<{
-    firstName: string;
-    lastName: string;
-    department: { id: number; name: string } | null;
-    role?: string | null;
-  } | null>(null);
-
-  const handleLogin = useCallback((token: string, responseData: any) => {
-    if (!token || !responseData?.user?.role) {
-      console.error('Invalid login response');
-      return;
-    }
-
-    localStorage.setItem("authToken", token);
-    localStorage.setItem("userRole", responseData.user.role);
-    setToken(token);
-    setUserRole(responseData.user.role);
-
-    setUser({
-      firstName: responseData.user.firstName,
-      lastName: responseData.user.lastName,
-      department: responseData.user.departmentId ? {
-        id: responseData.user.departmentId,
-        name: responseData.user.departmentName || `Отдел ${responseData.user.departmentId}`
-      } : null,
-      role: responseData.user.role,
-    });
-  }, []);
-
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userRole");
-    setToken(null);
-    setUserRole(null);
-    setUser(null);
-  }, []);
-
-  useEffect(() => {
-    if (!token) return;
-    let isMounted = true;
-
-    const checkAuth = async () => {
-      try {
-        const response = await fetch("http://localhost:3001/api/users/me", {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Auth check failed');
-        }
-
-        const data = await response.json();
-
-        if (!isMounted) return;
-
-        if (data.role && data.role !== userRole) {
-          setUserRole(data.role);
-          localStorage.setItem("userRole", data.role);
-        }
-
-        setUser({
-          firstName: data.user.firstName,
-          lastName: data.user.lastName,
-          department: data.user.department || null,
-          role: data.user.role,
-        });
-      } catch (error) {
-        handleLogout();
-      }
-    };
-
-    checkAuth();
-
-    return () => { isMounted = false; };
-  }, [token, userRole, handleLogout]);
-
-  if (!token) {
-    return <AuthSection onLogin={handleLogin} />;
-  }
-
-  if (token && !user) {
-    return <div>Загрузка данных пользователя...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-lg">Загрузка...</div>
+      </div>
+    );
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="*" element={
-          <MainPage
-            token={token}
-            userRole={userRole}
-            user={user}
-            handleLogout={handleLogout}
-          />
-        } />
+    <Router>
+      {/* Header всегда виден */}
+      <Header />
 
-        <Route
-          path="/department/:departmentId"
-          element={token ? <DepartmentPortal user={user} /> : <Navigate to="/" replace />}
-        />
+      {/* SubHeader показываем только если авторизованы */}
+      {user && <SubHeader />}
 
-        <Route path="/assignments" element={token ? <AssignmentList /> : <Navigate to="/" replace />} />
-        <Route path="/assignments/new" element={token ? <AssignmentForm /> : <Navigate to="/" replace />} />
+      <main className="flex-1 bg-gray-50 py-6">
+        <div className="container mx-auto px-4">
+          <Routes>
+            {/* Страница логина */}
+            <Route 
+              path="/login" 
+              element={<AuthSection onLogin={login} />} 
+            />
 
-        <Route path="/production-plans/new" element={token ? <ProductionPlanForm /> : <Navigate to="/" replace />} />
-
-        <Route path="/tasks" element={token ? <TaskList /> : <Navigate to="/" replace />} />
-        <Route path="/tasks/new" element={token ? <TaskForm /> : <Navigate to="/" replace />} />
-
-        <Route path="/tech-cards" element={token ? <TechCardList /> : <Navigate to="/" replace />} />
-        <Route path="/tech-cards/new" element={token ? <TechCardForm /> : <Navigate to="/" replace />} />
-
-        <Route path="*" element={
-          <MainPage
-            token={token}
-            userRole={userRole}
-            user={user}
-            handleLogout={handleLogout}
-          />
-        } />
-
-      </Routes>
-    </BrowserRouter>
+            {/* Приватные маршруты */}
+            <Route
+              path="/*"
+              element={
+                <PrivateRoute>
+                  <Routes>
+                    {/* Автоматическое перенаправление с главной */}
+                    <Route path="/" element={<AutoRedirect />} />
+                    
+                    {/* Админ-панель (только для админов) */}
+                    <Route 
+                      path="/admin" 
+                      element={
+                        user?.role === 'admin' ? (
+                          <AdminPanel />
+                        ) : (
+                          <Navigate to="/" replace />
+                        )
+                      } 
+                    />
+                    
+                    {/* Порталы департаментов */}
+                    <Route 
+                      path="/departments/:departmentId" 
+                      element={<DepartmentPortal />} 
+                    />
+                    
+                    {/* Остальные страницы */}
+                    <Route path="/documents" element={<WikiSection />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/production-plans" element={<ProductionPlansPage />} />
+                    
+                    {/* Fallback - главная страница */}
+                    <Route path="/main" element={<MainPage />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </PrivateRoute>
+              }
+            />
+          </Routes>
+        </div>
+      </main>
+    </Router>
   );
-}
+};
+
+const App: React.FC = () => {
+  return <AppContent />;
+};
 
 export default App;
-
-

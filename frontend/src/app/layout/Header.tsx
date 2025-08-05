@@ -1,69 +1,46 @@
-import React, { useState } from 'react';
-import { NavLink, Link } from 'react-router-dom';
+// frontend/src/app/layout/Header.tsx
+import React from 'react';
+import { useAuth } from '../../features/auth/hooks/useAuth';
+import { Link, useNavigate } from 'react-router-dom';
 
-interface User {
-  firstName: string;
-  lastName: string;
-  department?: { id: number; name: string } | null;
-}
-
-interface HeaderProps {
-  user: User | null;
-  onLogout: () => void;
-}
-
-const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
-  const [menuOpen, setMenuOpen] = useState(false);
+const Header: React.FC = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
-    <header className="bg-white shadow p-4 flex items-center justify-between">
-      <nav className="flex items-center space-x-6">
-        <NavLink 
-          to="/documents" 
-          className={({ isActive }) => isActive ? 'text-blue-600 font-semibold' : 'text-gray-700 hover:text-blue-600'}
-          onClick={() => setMenuOpen(false)}
-        >
-          Документы
-        </NavLink>
-        <NavLink 
-          to="/profile" 
-          className={({ isActive }) => isActive ? 'text-blue-600 font-semibold' : 'text-gray-700 hover:text-blue-600'}
-          onClick={() => setMenuOpen(false)}
-        >
-          Профиль
-        </NavLink>
-        <NavLink 
-          to="/production-plans" 
-          className={({ isActive }) => isActive ? 'text-blue-600 font-semibold' : 'text-gray-700 hover:text-blue-600'}
-          onClick={() => setMenuOpen(false)}
-        >
-          План производства
-        </NavLink>
-      </nav>
-
-      <div className="flex items-center space-x-4">
-        {user && (
-          <>
-            <div className="text-gray-700 font-medium flex items-center space-x-2">
-              <span>{user.firstName} {user.lastName}</span>
-              {user.department ? (
+    <header className="bg-blue-600 text-white">
+      <div className="container mx-auto flex items-center justify-between h-16 px-4">
+        <Link to="/" className="text-2xl font-bold">АО «Металлург»</Link>
+        {user ? (
+          <div className="flex items-center space-x-4">
+            <div className="text-right">
+              <div className="font-medium">{user.firstName} {user.lastName}</div>
+              {user.department && (
                 <Link
-                  to={`/department/${user.department.id}`}
-                  className="text-blue-600 underline hover:text-blue-800"
-                  title={`Перейти в отдел: ${user.department.name}`}
+                  to={`/departments/${user.department.id}`}
+                  className="text-sm text-gray-200 hover:underline"
                 >
-                  ({user.department.name})
+                  {user.department.name}
                 </Link>
-              ) : null}
+              )}
             </div>
-            <button 
-              onClick={onLogout} 
-              className="text-red-600 hover:text-red-800 border border-red-600 rounded px-3 py-1 text-sm"
-              title="Выйти"
+            <button
+              onClick={() => {
+                logout();
+                navigate('/login');
+              }}
+              className="px-3 py-1 bg-red-500 rounded hover:bg-red-600"
             >
               Выйти
             </button>
-          </>
+          </div>
+        ) : (
+          <button
+            onClick={() => navigate('/login')}
+            className="px-3 py-1 bg-green-500 rounded hover:bg-green-600"
+          >
+            Войти
+          </button>
         )}
       </div>
     </header>
@@ -71,4 +48,3 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
 };
 
 export default Header;
-
