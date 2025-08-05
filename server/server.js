@@ -16,9 +16,11 @@ const PORT = process.env.PORT || 3001;
 
 // Настройка CORS
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: ['http://localhost:5173', 'http://localhost:3000'], // порты для Vite и CRA
   credentials: true
 }));
+
+app.use(express.json());
 
 // Middleware
 app.use(express.json());
@@ -87,5 +89,14 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ 
+    error: 'Что-то пошло не так', 
+    message: err.message 
+  });
+});
+
 
 startServer();
