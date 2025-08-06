@@ -5,7 +5,6 @@ const { validationResult } = require('express-validator');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-
 // Получить всех пользователей (только для админа)
 exports.getAllUsers = async (req, res) => {
   try {
@@ -24,7 +23,6 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-
 exports.register = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -32,9 +30,7 @@ exports.register = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-
     const { username, password, firstName, lastName, role, phone, masterId, departmentId } = req.body;
-
 
     // Проверка существования отдела
     const department = await db.Department.findByPk(departmentId);
@@ -42,17 +38,14 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Указанный отдел не существует' });
     }
 
-
     // Проверка существования пользователя
     const existingUser = await db.User.findOne({ where: { username } });
     if (existingUser) {
       return res.status(400).json({ message: 'Пользователь с таким именем уже существует' });
     }
 
-
     // Хэширование пароля
     const passwordHash = await bcrypt.hash(password, 10);
-
 
     // Создание пользователя
     const user = await db.User.create({
@@ -66,17 +59,14 @@ exports.register = async (req, res) => {
       departmentId
     });
 
-
     // Не возвращаем хэш пароля в ответе
     const userResponse = user.get({ plain: true });
     delete userResponse.passwordHash;
-
 
     res.status(201).json({
       message: 'Пользователь успешно зарегистрирован',
       user: userResponse
     });
-
 
   } catch (error) {
     console.error('Ошибка регистрации:', error);
@@ -87,60 +77,83 @@ exports.register = async (req, res) => {
   }
 };
 
-
-// Логин
+// Логин - ОБНОВЛЕННАЯ ВЕРСИЯ
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
-
-
+    
+    console.log('🔍 Попытка входа:', username);
+    
+    // Используем scope 'withPassword' для получения хеша
     const user = await db.User.scope('withPassword').findOne({
       where: { username },
-      include: {
-        model: db.Department,
-        as: 'department',
-        attributes: ['id', 'name']
-      }
+      include: [{ model: db.Department, as: 'department' }]
     });
 
+    console.log('👤 Пользователь найден:', user ? user.username : 'НЕТ');
 
     if (!user) {
-      return res.status(400).json({ message: 'Неверный логин или пароль' });
+      console.log('❌ Пользователь не найден');
+      return res.status(401).json({ message: 'Неверный логин или пароль' });
     }
 
-
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Неверный логин или пароль' });
+    const { passwordHash } = user;
+    console.log('🔑 Хеш получен:', passwordHash ? 'ДА' : 'НЕТ');
+    
+    // Проверка пароля только через bcrypt
+    let passwordValid = false;
+    
+    if (passwordHash && passwordHash.startsWith('$2b$')) {
+      try {
+        passwordValid = await bcrypt.compare(password, passwordHash);
+        console.log('🔒 Результат bcrypt для', username, ':', passwordValid);
+      } catch (error) {
+        console.error('❌ Ошибка bcrypt:', error);
+        passwordValid = false;
+      }
+    } else {
+      console.log('❌ Неправильный формат хеша пароля');
+      passwordValid = false;
     }
 
+    if (!passwordValid) {
+      console.log('❌ Неверный пароль для:', username);
+      return res.status(401).json({ message: 'Неверный логин или пароль' });
+    }
 
-    // Формируем JWT с position
+    console.log('✅ Авторизация успешна для:', username);
+    
+    // Генерация JWT токена
     const token = jwt.sign(
-      {
-        userId: user.id // ✅ Теперь только ID
+      { 
+        userId: user.id, 
+        role: user.role, 
+        username: user.username 
       },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '24h' }
     );
 
+    console.log('🎫 JWT токен создан для пользователя ID:', user.id);
 
+    // Возвращаем данные без passwordHash
     res.json({
       token,
       user: {
         id: user.id,
         username: user.username,
-        role: user.role, // Отдаём роль отдельно
-        department: user.department,
-        position: user.position
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        department: user.department
       }
     });
-  } catch (e) {
-    console.error('Login error:', e);
+
+  } catch (error) {
+    console.error('💥 Ошибка в login:', error);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
-
 
 // Получить информацию о текущем пользователе
 exports.getMe = async (req, res) => {
@@ -213,8 +226,6 @@ exports.getProfileWithAssignments = async (req, res) => {
   }
 };
 
-
-
 // Запрос на доступ (отправка письма)
 exports.requestAccess = async (req, res) => {
   try {
@@ -223,9 +234,8 @@ exports.requestAccess = async (req, res) => {
       return res.status(400).json({ message: 'Пожалуйста, заполните все поля' });
     }
 
-
     // Настройка Nodemailer (используйте реальные SMTP данные!)
-    const transporter = nodemailer.createTransport({
+    const transporter = nodemailer.createTransporter({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT),
       auth: {
@@ -234,7 +244,6 @@ exports.requestAccess = async (req, res) => {
       },
     });
 
-
     const mailOptions = {
       from: process.env.SMTP_USER,
       to: process.env.IT_SUPPORT_EMAIL,
@@ -242,9 +251,7 @@ exports.requestAccess = async (req, res) => {
       text: `Детали запроса:\n\nФИО: ${fullName}\nТабельный номер: ${employeeId}\nКонтактные данные: ${contact}\n\nДата запроса: ${new Date().toLocaleString()}`,
     };
 
-
     await transporter.sendMail(mailOptions);
-
 
     res.json({ message: 'Ваш запрос отправлен. С вами свяжутся в ближайшее время.' });
   } catch (e) {
@@ -252,7 +259,6 @@ exports.requestAccess = async (req, res) => {
     res.status(500).json({ message: 'Ошибка при отправке запроса' });
   }
 };
-
 
 // Удаление пользователя (только для админа)
 exports.deleteUser = async (req, res) => {
@@ -266,7 +272,6 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
-
 
 // Обновление пользователя (только для админа)
 exports.updateUser = async (req, res) => {
@@ -314,5 +319,6 @@ exports.updateUserRole = async (req, res) => {
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
+
 
 

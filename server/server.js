@@ -20,8 +20,6 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
-
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -89,14 +87,6 @@ async function startServer() {
     process.exit(1);
   }
 }
-
-app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ 
-    error: 'Что-то пошло не так', 
-    message: err.message 
-  });
-});
 
 
 startServer();

@@ -40,6 +40,20 @@ const SubHeader: React.FC = () => {
             </li>
           ) : null}
 
+          {/* ✅ НОВАЯ ВКЛАДКА: Сменные задания */}
+          <li>
+            <NavLink
+              to="/assignments"
+              className={({ isActive }) =>
+                isActive
+                  ? 'text-blue-600 border-b-2 border-blue-600 pb-2 inline-block'
+                  : 'text-gray-600 hover:text-blue-600 pb-2 inline-block'
+              }
+            >
+              📋 Сменные задания
+            </NavLink>
+          </li>
+
           <li>
             <NavLink
               to="/documents"
@@ -85,4 +99,3 @@ const SubHeader: React.FC = () => {
 };
 
 export default SubHeader;
-

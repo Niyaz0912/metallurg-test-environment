@@ -13,6 +13,7 @@ import AdminPanel from '../features/users/AdminPanel';
 import PrivateRoute from './PrivateRoute';
 import AutoRedirect from './AutoRedirect';
 import { useAuth } from '../features/auth/hooks/useAuth';
+import AssignmentsPage from '../features/assignments/AssignmentsPage';
 
 const AppContent: React.FC = () => {
   const { user, loading, login } = useAuth();
@@ -73,6 +74,7 @@ const AppContent: React.FC = () => {
                     <Route path="/documents" element={<WikiSection />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/production-plans" element={<ProductionPlansPage />} />
+                    <Route path="/assignments" element={<AssignmentsPage />} />
                     
                     {/* Fallback - главная страница */}
                     <Route path="/main" element={<MainPage />} />

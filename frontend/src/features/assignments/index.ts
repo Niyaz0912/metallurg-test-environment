@@ -1,2 +1,2 @@
-export { default as AssignmentList } from './AssignmentList';
-export { default as AssignmentForm } from './AssignmentForm';
+export { default as AssignmentList } from './components/AssignmentList';
+export { default as AssignmentForm } from './components/AssignmentForm';
