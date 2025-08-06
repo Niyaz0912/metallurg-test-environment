@@ -1,4 +1,3 @@
-// frontend/src/features/assignments/AssignmentsPage.tsx
 import React, { useState } from 'react';
 import { useAuth } from '../auth/hooks/useAuth';
 import AssignmentList from './components/AssignmentList';
@@ -11,7 +10,9 @@ const AssignmentsPage: React.FC = () => {
   // ✅ ИСПРАВЛЕНИЕ: Добавляем все недостающие состояния
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showExcelUploader, setShowExcelUploader] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // ✅ ИСПРАВЛЕНИЕ: Определяем возможности пользователя
   const canCreateAssignments = user?.role === 'master' || user?.role === 'admin';
@@ -25,6 +26,36 @@ const AssignmentsPage: React.FC = () => {
   const handleExcelUploadComplete = () => {
     setShowExcelUploader(false);
     setRefreshTrigger(prev => prev + 1); // Обновляем список
+  };
+
+  // ✅ НОВОЕ: Функция удаления всех активных заданий
+  const handleDeleteAllActiveAssignments = async () => {
+    setIsDeleting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/assignments/delete-all-active', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Ошибка при удалении заданий');
+      }
+
+      const result = await response.json();
+      alert(`Успешно удалено ${result.deletedCount} активных заданий`);
+      
+      setRefreshTrigger(prev => prev + 1); // Обновляем список
+      setShowDeleteConfirm(false);
+    } catch (error) {
+      console.error('Ошибка удаления заданий:', error);
+      alert('Ошибка при удалении заданий');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -78,9 +109,53 @@ const AssignmentsPage: React.FC = () => {
               >
                 {showExcelUploader ? 'Отменить' : '📊 Загрузить Excel'}
               </button>
+
+              {/* ✅ НОВОЕ: Кнопка удаления всех активных заданий */}
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="px-4 py-2 rounded font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                disabled={isDeleting}
+              >
+                {isDeleting ? '⏳ Удаление...' : '🗑️ Удалить все активные'}
+              </button>
             </div>
           )}
         </div>
+
+        {/* ✅ НОВОЕ: Модальное окно подтверждения удаления */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-bold text-red-600 mb-4">
+                ⚠️ Подтверждение удаления
+              </h3>
+              <p className="text-gray-700 mb-6">
+                Вы действительно хотите удалить <strong>все активные задания</strong>? 
+                <br />
+                <br />
+                <span className="text-red-600 font-medium">
+                  Это действие нельзя отменить!
+                </span>
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                  disabled={isDeleting}
+                >
+                  Отменить
+                </button>
+                <button
+                  onClick={handleDeleteAllActiveAssignments}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Удаление...' : 'Удалить все'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Форма создания задания */}
         {showCreateForm && canCreateAssignments && (
@@ -114,6 +189,7 @@ const AssignmentsPage: React.FC = () => {
                 <div className="text-green-600">✅ Создание заданий</div>
                 <div className="text-green-600">✅ Массовая загрузка Excel</div>
                 <div className="text-green-600">✅ Управление всеми заданиями</div>
+                <div className="text-red-600">🗑️ Удаление всех активных заданий</div>
               </>
             ) : (
               <>
@@ -145,6 +221,7 @@ const AssignmentsPage: React.FC = () => {
             <div>• Операторы выполняют задания</div>
             <div>• Можно загружать Excel файлы</div>
             <div>• Отмечайте фактическое количество</div>
+            <div>• Активные задания можно удалить все сразу</div>
           </div>
         </div>
       </div>
