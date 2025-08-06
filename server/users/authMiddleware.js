@@ -1,4 +1,3 @@
-// users/authMiddleware.js
 const jwt = require('jsonwebtoken');
 const db = require('../models');
 
@@ -84,4 +83,12 @@ const roleMiddleware = (allowedRoles) => {
   };
 };
 
-module.exports = { authMiddleware, roleMiddleware };
+// ✅ ИСПРАВЛЕНИЕ: Добавляем экспорт authenticateToken как алиас
+const authenticateToken = authMiddleware;
+
+module.exports = { 
+  authMiddleware, 
+  roleMiddleware, 
+  authenticateToken  // ✅ Добавлен алиас для совместимости
+};
+
