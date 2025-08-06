@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../auth/hooks/useAuth';
 import UserList from './components/UserList';
 import UserCreateForm from './components/UserCreateForm';
+import ProductionPlansManager from './components/ProductionPlansManager';
 
 interface User {
   id: number;
@@ -19,9 +20,10 @@ interface User {
 
 const AdminPanel: React.FC = () => {
   const { user, loading } = useAuth();
-  const [users, setUsers] = useState<User[]>([]); // ✅ Правильный тип
+  const [users, setUsers] = useState<User[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [activeSection, setActiveSection] = useState<'users' | 'plans'>('users'); // ✅ Перенесено внутрь компонента
 
   // Проверка прав доступа
   if (!user || user.role !== 'admin') {
@@ -95,33 +97,65 @@ const AdminPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Действия */}
+      {/* Навигация по секциям */}
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Управление пользователями</h2>
+        <div className="flex space-x-4 mb-6">
           <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            onClick={() => setActiveSection('users')}
+            className={`px-4 py-2 rounded ${
+              activeSection === 'users' 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
           >
-            {showCreateForm ? 'Отменить' : '+ Создать пользователя'}
+            👥 Пользователи
+          </button>
+          <button
+            onClick={() => setActiveSection('plans')}
+            className={`px-4 py-2 rounded ${
+              activeSection === 'plans' 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            📋 Планы производства
           </button>
         </div>
 
-        {/* Форма создания пользователя */}
-        {showCreateForm && (
-          <div className="mb-6 p-4 bg-gray-50 rounded">
-            <UserCreateForm onUserCreated={handleUserCreated} />
+        {/* Условный рендеринг секций */}
+        {activeSection === 'users' && (
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Управление пользователями</h2>
+              <button
+                onClick={() => setShowCreateForm(!showCreateForm)}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                {showCreateForm ? 'Отменить' : '+ Создать пользователя'}
+              </button>
+            </div>
+
+            {/* Форма создания пользователя */}
+            {showCreateForm && (
+              <div className="mb-6 p-4 bg-gray-50 rounded">
+                <UserCreateForm onUserCreated={handleUserCreated} />
+              </div>
+            )}
+
+            {/* Список пользователей */}
+            <UserList 
+              users={users} 
+              onUserDeleted={handleUserDeleted}
+            />
           </div>
         )}
 
-        {/* Список пользователей */}
-        <UserList 
-          users={users} 
-          onUserDeleted={handleUserDeleted}
-        />
+        {activeSection === 'plans' && (
+          <ProductionPlansManager />
+        )}
       </div>
 
-      {/* Дополнительные админ-функции */}
+      {/* Статистические карточки */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold mb-2">📊 Статистика</h3>
@@ -152,3 +186,4 @@ const AdminPanel: React.FC = () => {
 };
 
 export default AdminPanel;
+
