@@ -1,4 +1,3 @@
-// server/assignments/assignmentController.js
 const db = require('../models');
 const multer = require('multer');
 const path = require('path');
@@ -21,30 +20,44 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    const allowedExtensions = ['.xlsx', '.xls'];
-    const fileExtension = path.extname(file.originalname).toLowerCase();
-    
-    if (allowedExtensions.includes(fileExtension)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Разрешены только Excel файлы (.xlsx, .xls)'), false);
+// ✅ ИСПРАВЛЕНИЕ: Создаем upload с обработкой ошибок
+let upload;
+try {
+  upload = multer({
+    storage: storage,
+    fileFilter: (req, file, cb) => {
+      const allowedExtensions = ['.xlsx', '.xls'];
+      const fileExtension = path.extname(file.originalname).toLowerCase();
+      
+      if (allowedExtensions.includes(fileExtension)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Разрешены только Excel файлы (.xlsx, .xls)'), false);
+      }
+    },
+    limits: {
+      fileSize: 5 * 1024 * 1024 // 5MB лимит
     }
-  },
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB лимит
-  }
-});
+  });
+  
+  console.log('✅ Multer middleware создан успешно');
+} catch (error) {
+  console.error('❌ Ошибка создания multer middleware:', error);
+  upload = null;
+}
 
-// ✅ ИСПРАВЛЕНИЕ: Добавлена поддержка админов везде
+// ✅ ИСПРАВЛЕНИЕ: Безопасный экспорт middleware
+exports.uploadExcelMiddleware = upload ? upload.single('excelFile') : (req, res, next) => {
+  res.status(500).json({ message: 'Загрузка файлов временно недоступна' });
+};
+
+// ✅ ИСПРАВЛЕНИЕ: Корректные роли пользователей
 const hasManagePermission = (userRole) => {
   return userRole === 'master' || userRole === 'admin';
 };
 
 const hasViewPermission = (userRole) => {
-  return userRole === 'master' || userRole === 'admin' || userRole === 'employee' || userRole === 'operator';
+  return userRole === 'master' || userRole === 'admin' || userRole === 'employee' || userRole === 'director';
 };
 
 // Получить список сменных заданий по роли
@@ -229,7 +242,8 @@ exports.updateAssignment = async (req, res) => {
       });
     } 
 
-    if ((user.role === 'employee' || user.role === 'operator') && assignment.operatorId === user.userId) {
+    // ✅ ИСПРАВЛЕНИЕ: Убрана несуществующая роль 'operator'
+    if (user.role === 'employee' && assignment.operatorId === user.userId) {
       // Сотрудник может обновить только фактическое количество и статус
       const allowedFields = {};
       
@@ -329,9 +343,9 @@ exports.getAssignmentById = async (req, res) => {
 
     const user = req.user;
 
-    // Мастер и админ видят все задания, сотрудник только свои
+    // ✅ ИСПРАВЛЕНИЕ: Упрощенная проверка прав доступа
     if (hasManagePermission(user.role) || 
-        (assignment.operatorId === user.userId && hasViewPermission(user.role))) {
+        (assignment.operatorId === user.userId && user.role === 'employee')) {
       return res.json(assignment);
     }
 
@@ -392,7 +406,7 @@ exports.uploadAssignmentsFromExcel = async (req, res) => {
   }
 };
 
-// ✅ НОВОЕ: Получить статистику по заданиям
+// ✅ ИСПРАВЛЕНИЕ: Получить статистику по заданиям
 exports.getAssignmentStatistics = async (req, res) => {
   try {
     if (!hasManagePermission(req.user.role)) {
@@ -408,11 +422,13 @@ exports.getAssignmentStatistics = async (req, res) => {
     });
 
     const totalAssignments = await db.Assignment.count();
+    
+    // ✅ ИСПРАВЛЕНИЕ: Исправлена опечатка db.Sequelize.Op -> db.sequelize.Op
     const completedToday = await db.Assignment.count({
       where: {
         status: 'completed',
         updatedAt: {
-          [db.Sequelize.Op.gte]: new Date(new Date().setHours(0, 0, 0, 0))
+          [db.sequelize.Op.gte]: new Date(new Date().setHours(0, 0, 0, 0))
         }
       }
     });
@@ -432,6 +448,16 @@ exports.getAssignmentStatistics = async (req, res) => {
   }
 };
 
-// Экспорт middleware для загрузки Excel
-exports.uploadExcelMiddleware = upload.single('excelFile');
+// В конец assignmentController.js добавьте для отладки:
+console.log('🔍 Assignment Controller exports:', {
+  getAssignments: typeof exports.getAssignments,
+  createAssignment: typeof exports.createAssignment,
+  updateAssignment: typeof exports.updateAssignment,
+  deleteAssignment: typeof exports.deleteAssignment,  
+  getAssignmentById: typeof exports.getAssignmentById,
+  uploadAssignmentsFromExcel: typeof exports.uploadAssignmentsFromExcel,
+  getAssignmentStatistics: typeof exports.getAssignmentStatistics,
+  uploadExcelMiddleware: typeof exports.uploadExcelMiddleware
+});
+
 

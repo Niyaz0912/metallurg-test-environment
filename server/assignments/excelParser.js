@@ -4,108 +4,78 @@ const db = require('../models');
 
 class AssignmentExcelParser {
   constructor() {
-    this.requiredColumns = [
-      'Заказчик',
-      'Наименование заказа', 
-      'Дата смены',
-      'Тип смены',
-      'Логин оператора',
-      'Плановое количество',
-      'Номер станка'
-    ];
+    // Маппинг колонок Excel на поля базы данных
+    this.columnMapping = {
+      'Заказчик': 'customerName',
+      'Наименование заказа': 'detailName', 
+      'Дата смены': 'shiftDate',
+      'Тип смены': 'shiftType',
+      'Логин оператора': 'operatorUsername',
+      'Плановое количество': 'plannedQuantity',
+      'Номер станка': 'machineNumber'
+    };
   }
 
-  async parseExcelFile(filePath, uploadedBy) {
-    try {
-      console.log('🔄 Парсинг Excel файла:', filePath);
-      
-      // Создаем экземпляр workbook
-      const workbook = new ExcelJS.Workbook();
-      
-      // Читаем Excel файл
-      await workbook.xlsx.readFile(filePath);
-      
-      // Получаем первый лист
-      const worksheet = workbook.getWorksheet(1);
-      
-      if (!worksheet) {
-        throw new Error('Excel файл не содержит листов с данными');
-      }
+  async parseExcelFile(filePath) {
+    const results = {
+      success: [],
+      errors: [],
+      skipped: []
+    };
 
-      console.log(`📋 Обрабатываем лист: "${worksheet.name}"`);
+    try {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(filePath);
+      const worksheet = workbook.getWorksheet(1);
+
+      if (!worksheet) {
+        throw new Error('Excel файл пуст или поврежден');
+      }
 
       // Получаем заголовки из первой строки
       const headerRow = worksheet.getRow(1);
       const headers = [];
-      
-      headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
-        headers[colNumber] = cell.text || cell.value;
+      headerRow.eachCell((cell, colNumber) => {
+        headers[colNumber] = cell.value?.toString().trim();
       });
 
-      console.log('📝 Найденные заголовки:', headers);
+      console.log('📋 Заголовки Excel:', headers);
 
-      // Валидируем наличие обязательных колонок
-      this.validateHeaders(headers);
-
-      // Получаем индексы колонок
-      const columnIndexes = this.getColumnIndexes(headers);
-
-      // Обрабатываем строки данных (начиная со 2-й строки)
-      const results = {
-        success: [],
-        errors: [],
-        skipped: []
-      };
-
-      let processedRows = 0;
-      
-      // Перебираем строки начиная с 2-й
-      worksheet.eachRow({ includeEmpty: false }, async (row, rowNumber) => {
-        // Пропускаем заголовок
-        if (rowNumber === 1) return;
+      // Обрабатываем каждую строку данных
+      for (let rowNum = 2; rowNum <= worksheet.rowCount; rowNum++) {
+        const row = worksheet.getRow(rowNum);
         
-        try {
-          const rowData = this.extractRowData(row, columnIndexes);
-          
-          if (this.isEmptyRow(rowData)) {
-            results.skipped.push({
-              row: rowNumber,
-              reason: 'Пустая строка или отсутствуют ключевые данные'
-            });
-            return;
-          }
+        // Пропускаем пустые строки
+        if (row.isEmpty) {
+          results.skipped.push({
+            row: rowNum,
+            reason: 'Пустая строка'
+          });
+          continue;
+        }
 
-          const assignment = await this.processRowData(rowData, rowNumber);
+        try {
+          const rowData = await this.parseRow(row, headers, rowNum);
+          const assignment = await this.createAssignment(rowData);
           
-          if (assignment) {
-            results.success.push({
-              row: rowNumber,
-              operator: assignment.operatorUsername,
-              machine: assignment.machineNumber,
-              assignmentId: assignment.id
-            });
-          } else {
-            results.skipped.push({
-              row: rowNumber,
-              reason: 'Не удалось создать задание'
-            });
-          }
-          
-          processedRows++;
-          
+          results.success.push({
+            row: rowNum,
+            assignment: assignment,
+            data: rowData
+          });
+
         } catch (error) {
           results.errors.push({
-            row: rowNumber,
+            row: rowNum,
             error: error.message,
-            data: this.extractRowData(row, columnIndexes, true) // безопасное извлечение для отладки
+            data: this.getRowData(row, headers)
           });
         }
-      });
+      }
 
-      console.log(`✅ Обработка завершена. Строк обработано: ${processedRows}`);
-      console.log('📊 Результаты:', {
+      console.log('📊 Результаты парсинга:', {
         успешно: results.success.length,
-        ошибки: results.errors.length,
+        ошибок: results.errors.length,
         пропущено: results.skipped.length
       });
 
@@ -113,134 +83,101 @@ class AssignmentExcelParser {
 
     } catch (error) {
       console.error('❌ Ошибка парсинга Excel:', error);
-      throw error;
+      throw new Error(`Ошибка чтения Excel файла: ${error.message}`);
     }
   }
 
-  validateHeaders(headers) {
-    const availableHeaders = Object.values(headers).filter(h => h && h.trim());
-    const missingColumns = this.requiredColumns.filter(col => 
-      !availableHeaders.some(header => header.includes(col))
-    );
-    
-    if (missingColumns.length > 0) {
-      throw new Error(`Отсутствуют обязательные колонки: ${missingColumns.join(', ')}`);
-    }
-  }
+  async parseRow(row, headers, rowNum) {
+    const rowData = {};
 
-  getColumnIndexes(headers) {
-    const indexes = {};
-    
-    Object.entries(headers).forEach(([colIndex, header]) => {
-      if (!header) return;
-      
-      const headerText = header.toString().trim();
-      
-      this.requiredColumns.forEach(requiredCol => {
-        if (headerText.includes(requiredCol)) {
-          indexes[requiredCol] = parseInt(colIndex);
-        }
-      });
-    });
-
-    return indexes;
-  }
-
-  extractRowData(row, columnIndexes, safe = false) {
-    const data = {};
-    
-    Object.entries(columnIndexes).forEach(([columnName, colIndex]) => {
-      try {
-        const cell = row.getCell(colIndex);
-        
-        // Получаем значение ячейки
-        let value = cell.value;
-        
-        // Обрабатываем разные типы данных
-        if (value === null || value === undefined) {
-          data[columnName] = '';
-        } else if (typeof value === 'object' && value.text) {
-          // Для форматированного текста
-          data[columnName] = value.text;
-        } else if (value instanceof Date) {
-          // Для дат
-          data[columnName] = value.toISOString().split('T')[0];
-        } else {
-          data[columnName] = value.toString().trim();
-        }
-        
-      } catch (error) {
-        if (!safe) {
-          console.warn(`Ошибка чтения ячейки ${colIndex} в строке ${row.number}:`, error.message);
-        }
-        data[columnName] = '';
+    // Извлекаем данные из каждой ячейки
+    row.eachCell((cell, colNumber) => {
+      const header = headers[colNumber];
+      if (header && this.columnMapping[header]) {
+        const fieldName = this.columnMapping[header];
+        rowData[fieldName] = cell.value?.toString().trim();
       }
     });
 
-    return data;
-  }
+    // Валидация обязательных полей
+    const requiredFields = ['operatorUsername', 'shiftDate', 'shiftType', 'machineNumber'];
+    for (const field of requiredFields) {
+      if (!rowData[field]) {
+        throw new Error(`Отсутствует обязательное поле: ${field}`);
+      }
+    }
 
-  isEmptyRow(rowData) {
-    const keyFields = ['Логин оператора', 'Номер станка'];
-    return keyFields.every(field => !rowData[field] || rowData[field].trim() === '');
-  }
-
-  async processRowData(rowData, rowNumber) {
-    // Ищем пользователя по логину
-    const operatorUsername = rowData['Логин оператора'];
+    // Проверяем существование оператора
     const operator = await db.User.findOne({
-      where: { username: operatorUsername }
+      where: { username: rowData.operatorUsername }
     });
 
     if (!operator) {
-      throw new Error(`Пользователь с логином "${operatorUsername}" не найден`);
+      throw new Error(`Оператор не найден: ${rowData.operatorUsername}`);
     }
 
-    // Обрабатываем дату смены
-    let shiftDate = rowData['Дата смены'];
-    if (!shiftDate || shiftDate === '') {
-      // Используем последнюю известную дату или текущую
-      shiftDate = this.lastKnownDate || new Date().toISOString().split('T')[0];
-    } else {
-      this.lastKnownDate = shiftDate;
+    // Валидация типа смены
+    const shiftType = rowData.shiftType.toLowerCase();
+    if (!['день', 'ночь', 'day', 'night'].includes(shiftType)) {
+      throw new Error(`Неверный тип смены: ${rowData.shiftType}`);
     }
 
-    // Нормализуем тип смены
-    const shiftTypeText = rowData['Тип смены'].toLowerCase();
-    const shiftType = shiftTypeText.includes('ночь') || shiftTypeText.includes('night') ? 'night' : 'day';
+    // Преобразуем данные
+    return {
+      operatorId: operator.id,
+      shiftDate: this.parseDate(rowData.shiftDate),
+      shiftType: shiftType === 'ночь' || shiftType === 'night' ? 'night' : 'day',
+      taskDescription: `Обработка деталей заказа ${rowData.detailName || 'Не указано'} для ${rowData.customerName || 'Не указан'} на станке ${rowData.machineNumber}`,
+      machineNumber: rowData.machineNumber,
+      detailName: rowData.detailName || 'Не указано',
+      customerName: rowData.customerName || 'Не указан',
+      plannedQuantity: parseInt(rowData.plannedQuantity) || 0,
+      techCardId: 1,
+      status: 'assigned'
+    };
+  }
 
-    // Получаем остальные данные
-    const customerName = rowData['Заказчик'] || 'Не указан';
-    const orderName = rowData['Наименование заказа'] || 'Не указан';
-    const machineNumber = rowData['Номер станка'];
-    const plannedQuantity = parseInt(rowData['Плановое количество']) || 0;
+  parseDate(dateString) {
+    // Пробуем разные форматы дат
+    const formats = [
+      /(\d{4})-(\d{2})-(\d{2})/, // YYYY-MM-DD
+      /(\d{2})\.(\d{2})\.(\d{4})/, // DD.MM.YYYY
+      /(\d{2})\/(\d{2})\/(\d{4})/ // DD/MM/YYYY
+    ];
 
-    // Генерируем описание задачи
-    const taskDescription = `Обработка деталей заказа "${orderName}" для заказчика "${customerName}" на станке ${machineNumber}`;
-
-    try {
-      // Создаем задание в базе данных
-      const assignment = await db.Assignment.create({
-        operatorId: operator.id,
-        shiftDate: new Date(shiftDate),
-        shiftType: shiftType,
-        taskDescription: taskDescription,
-        machineNumber: machineNumber,
-        detailName: orderName,
-        customerName: customerName,
-        plannedQuantity: plannedQuantity,
-        techCardId: 1, // Временно, потом можно связать с реальными техкартами
-        status: 'assigned'
-      });
-
-      // Добавляем дополнительную информацию для отчета
-      assignment.operatorUsername = operatorUsername;
-
-      return assignment;
-      
-    } catch (dbError) {
-      throw new Error(`Ошибка сохранения в БД: ${dbError.message}`);
+    for (const format of formats) {
+      const match = dateString.match(format);
+      if (match) {
+        if (format === formats[0]) {
+          return new Date(match[1], match[2] - 1, match[3]);
+        } else {
+          return new Date(match[3], match[2] - 1, match[1]);
+        }
+      }
     }
+
+    // Если ничего не подошло, пробуем стандартный парсинг
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      throw new Error(`Неверный формат даты: ${dateString}`);
+    }
+    
+    return date;
+  }
+
+  async createAssignment(data) {
+    return await db.Assignment.create(data);
+  }
+
+  getRowData(row, headers) {
+    const data = {};
+    row.eachCell((cell, colNumber) => {
+      const header = headers[colNumber];
+      if (header) {
+        data[header] = cell.value?.toString().trim();
+      }
+    });
+    return data;
   }
 }
 

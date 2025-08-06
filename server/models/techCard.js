@@ -1,23 +1,29 @@
 // server/models/techCard.js
 module.exports = (sequelize, DataTypes) => {
   const TechCard = sequelize.define('TechCard', {
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    productName: { type: DataTypes.STRING, allowNull: false },
-    description: { type: DataTypes.TEXT },
-    drawingUrl: { type: DataTypes.STRING }, // путь или URL к чертежу
-    specifications: { type: DataTypes.JSONB, allowNull: true }, // размеры, характеристики
-    productionStages: { 
-      type: DataTypes.JSONB, 
-      allowNull: false,
-      // пример: [{ stageName: 'Сварка', order: 1, responsible: 'Оператор'}, ...]
+    productName: {
+      type: DataTypes.STRING,
+      allowNull: false
     },
-    createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    specifications: { 
+      type: DataTypes.JSON, 
+      allowNull: true 
+    },
+    operationSteps: {
+      type: DataTypes.JSON,  
+      allowNull: true
+    }
   }, {
-    tableName: 'tech_cards',
+    tableName: 'tech_cards'
   });
 
-  TechCard.associate = models => {
-    TechCard.hasMany(models.TechCardExecution, { foreignKey: 'techCardId', as: 'executions' });
+  // Ассоциации если есть
+  TechCard.associate = (models) => {
+    // связи с другими моделями
   };
 
   return TechCard;
