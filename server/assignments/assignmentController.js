@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const AssignmentExcelParser = require('./excelParser');
 
-// Настройка multer для загрузки Excel файлов
+// Настройка multer для Excel файлов
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.join(__dirname, '../uploads/assignments');
@@ -20,89 +20,44 @@ const storage = multer.diskStorage({
   }
 });
 
-// ✅ ИСПРАВЛЕНИЕ: Создаем upload с обработкой ошибок
-let upload;
-try {
-  upload = multer({
-    storage: storage,
-    fileFilter: (req, file, cb) => {
-      const allowedExtensions = ['.xlsx', '.xls'];
-      const fileExtension = path.extname(file.originalname).toLowerCase();
-      
-      if (allowedExtensions.includes(fileExtension)) {
-        cb(null, true);
-      } else {
-        cb(new Error('Разрешены только Excel файлы (.xlsx, .xls)'), false);
-      }
-    },
-    limits: {
-      fileSize: 5 * 1024 * 1024 // 5MB лимит
-    }
-  });
-  
-  console.log('✅ Multer middleware создан успешно');
-} catch (error) {
-  console.error('❌ Ошибка создания multer middleware:', error);
-  upload = null;
-}
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const allowedExtensions = ['.xlsx', '.xls'];
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    cb(allowedExtensions.includes(fileExtension) ? null : new Error('Разрешены только Excel файлы'), allowedExtensions.includes(fileExtension));
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
 
-// ✅ ИСПРАВЛЕНИЕ: Безопасный экспорт middleware
-exports.uploadExcelMiddleware = upload ? upload.single('excelFile') : (req, res, next) => {
-  res.status(500).json({ message: 'Загрузка файлов временно недоступна' });
-};
+exports.uploadExcelMiddleware = upload.single('excelFile');
 
-// ✅ ИСПРАВЛЕНИЕ: Корректные роли пользователей
-const hasManagePermission = (userRole) => {
-  return userRole === 'master' || userRole === 'admin';
-};
+// Вспомогательные функции
+const hasManagePermission = (userRole) => userRole === 'master' || userRole === 'admin';
+const hasViewPermission = (userRole) => ['master', 'admin', 'employee', 'director'].includes(userRole);
 
-const hasViewPermission = (userRole) => {
-  return userRole === 'master' || userRole === 'admin' || userRole === 'employee' || userRole === 'director';
-};
-
-// Получить список сменных заданий по роли
+// Получить список заданий
 exports.getAssignments = async (req, res) => {
   try {
     const user = req.user;
 
-    // ✅ ИСПРАВЛЕНИЕ: Улучшенная проверка прав доступа
     if (!hasViewPermission(user.role)) {
       return res.status(403).json({ message: 'Доступ запрещён' });
     }
 
-    let assignments;
-    
-    if (hasManagePermission(user.role)) {
-      // Мастер и админ видят все задания
-      assignments = await db.Assignment.findAll({
-        include: [
-          { 
-            model: db.User, 
-            as: 'operator', 
-            attributes: ['id', 'firstName', 'lastName', 'username'] 
-          },
-          { 
-            model: db.TechCard, 
-            as: 'techCard',
-            attributes: ['id', 'productName', 'description']
-          }
-        ],
-        order: [['createdAt', 'DESC']]
-      });
-    } else {
-      // Сотрудник видит только свои задания
-      assignments = await db.Assignment.findAll({
-        where: { operatorId: user.userId },
-        include: [
-          { 
-            model: db.TechCard, 
-            as: 'techCard',
-            attributes: ['id', 'productName', 'description']
-          }
-        ],
-        order: [['createdAt', 'DESC']]
-      });
-    }
+    const whereCondition = hasManagePermission(user.role) ? {} : { operatorId: user.userId };
+    const includeOperator = hasManagePermission(user.role) ? [
+      { model: db.User, as: 'operator', attributes: ['id', 'firstName', 'lastName', 'username'] }
+    ] : [];
+
+    const assignments = await db.Assignment.findAll({
+      where: whereCondition,
+      include: [
+        ...includeOperator,
+        { model: db.TechCard, as: 'techCard', attributes: ['id', 'productName', 'description'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
 
     res.json(assignments);
   } catch (e) {
@@ -111,41 +66,27 @@ exports.getAssignments = async (req, res) => {
   }
 };
 
-// ✅ ИСПРАВЛЕНИЕ: Создание задания (мастер и админ)
+// Создать задание
 exports.createAssignment = async (req, res) => {
   try {
     if (!hasManagePermission(req.user.role)) {
       return res.status(403).json({ message: 'Доступ запрещён' });
     }
 
-    const { 
-      operatorId, 
-      shiftDate, 
-      shiftType, 
-      taskDescription, 
-      machineNumber, 
-      detailName, 
-      customerName, 
-      plannedQuantity, 
-      techCardId 
-    } = req.body;
+    const { operatorId, shiftDate, shiftType, taskDescription, machineNumber, detailName, customerName, plannedQuantity, techCardId } = req.body;
 
-    // ✅ ИСПРАВЛЕНИЕ: Валидация обязательных полей
+    // Валидация
     if (!operatorId || !shiftDate || !shiftType || !taskDescription || !machineNumber) {
-      return res.status(400).json({ 
-        message: 'Обязательные поля: operatorId, shiftDate, shiftType, taskDescription, machineNumber' 
-      });
+      return res.status(400).json({ message: 'Заполните все обязательные поля' });
     }
 
-    // ✅ ИСПРАВЛЕНИЕ: Проверяем, что оператор существует
+    if (!['day', 'night'].includes(shiftType)) {
+      return res.status(400).json({ message: 'Тип смены должен быть "day" или "night"' });
+    }
+
     const operator = await db.User.findByPk(operatorId);
     if (!operator) {
       return res.status(404).json({ message: 'Оператор не найден' });
-    }
-
-    // ✅ ИСПРАВЛЕНИЕ: Проверяем валидность типа смены
-    if (!['day', 'night'].includes(shiftType)) {
-      return res.status(400).json({ message: 'Тип смены должен быть "day" или "night"' });
     }
 
     const assignment = await db.Assignment.create({
@@ -157,23 +98,14 @@ exports.createAssignment = async (req, res) => {
       detailName: detailName || 'Не указано',
       customerName: customerName || 'Не указан',
       plannedQuantity: parseInt(plannedQuantity) || 0,
-      techCardId: techCardId || 1, // Временное значение
+      techCardId: techCardId || 1,
       status: 'assigned'
     });
 
-    // Получаем созданное задание с связанными данными
     const createdAssignment = await db.Assignment.findByPk(assignment.id, {
       include: [
-        { 
-          model: db.User, 
-          as: 'operator', 
-          attributes: ['id', 'firstName', 'lastName', 'username'] 
-        },
-        { 
-          model: db.TechCard, 
-          as: 'techCard',
-          attributes: ['id', 'productName', 'description']
-        }
+        { model: db.User, as: 'operator', attributes: ['id', 'firstName', 'lastName', 'username'] },
+        { model: db.TechCard, as: 'techCard', attributes: ['id', 'productName', 'description'] }
       ]
     });
 
@@ -181,14 +113,13 @@ exports.createAssignment = async (req, res) => {
       message: 'Задание создано успешно',
       assignment: createdAssignment
     });
-
   } catch (e) {
     console.error('Create assignment error:', e);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
 
-// ✅ ИСПРАВЛЕНИЕ: Обновление задания с улучшенной логикой
+// Обновить задание
 exports.updateAssignment = async (req, res) => {
   try {
     const { id } = req.params;
@@ -201,95 +132,43 @@ exports.updateAssignment = async (req, res) => {
     const user = req.user;
 
     if (hasManagePermission(user.role)) {
-      // Мастер и админ могут обновить все поля
+      // Мастер/админ могут обновить всё
       const updateData = { ...req.body };
-      
-      // ✅ ИСПРАВЛЕНИЕ: Валидация данных при обновлении
-      if (updateData.shiftDate) {
-        updateData.shiftDate = new Date(updateData.shiftDate);
-      }
-      if (updateData.plannedQuantity) {
-        updateData.plannedQuantity = parseInt(updateData.plannedQuantity);
-      }
-      if (updateData.actualQuantity !== undefined) {
-        updateData.actualQuantity = parseInt(updateData.actualQuantity);
-      }
-      if (updateData.shiftType && !['day', 'night'].includes(updateData.shiftType)) {
-        return res.status(400).json({ message: 'Тип смены должен быть "day" или "night"' });
-      }
+      if (updateData.shiftDate) updateData.shiftDate = new Date(updateData.shiftDate);
+      if (updateData.plannedQuantity) updateData.plannedQuantity = parseInt(updateData.plannedQuantity);
+      if (updateData.actualQuantity !== undefined) updateData.actualQuantity = parseInt(updateData.actualQuantity);
 
       await assignment.update(updateData);
-      
-      // Получаем обновленное задание с связанными данными
-      const updatedAssignment = await db.Assignment.findByPk(id, {
-        include: [
-          { 
-            model: db.User, 
-            as: 'operator', 
-            attributes: ['id', 'firstName', 'lastName', 'username'] 
-          },
-          { 
-            model: db.TechCard, 
-            as: 'techCard',
-            attributes: ['id', 'productName', 'description']
-          }
-        ]
-      });
-
-      return res.json({ 
-        message: 'Задание обновлено', 
-        assignment: updatedAssignment 
-      });
-    } 
-
-    // ✅ ИСПРАВЛЕНИЕ: Убрана несуществующая роль 'operator'
-    if (user.role === 'employee' && assignment.operatorId === user.userId) {
-      // Сотрудник может обновить только фактическое количество и статус
+    } else if (user.role === 'employee' && assignment.operatorId === user.userId) {
+      // Сотрудник может обновить только количество и статус
       const allowedFields = {};
-      
-      if (req.body.actualQuantity !== undefined) {
-        allowedFields.actualQuantity = parseInt(req.body.actualQuantity);
-      }
-      
-      if (req.body.status !== undefined) {
-        if (!['assigned', 'completed'].includes(req.body.status)) {
-          return res.status(400).json({ message: 'Статус должен быть "assigned" или "completed"' });
-        }
-        allowedFields.status = req.body.status;
-      }
+      if (req.body.actualQuantity !== undefined) allowedFields.actualQuantity = parseInt(req.body.actualQuantity);
+      if (req.body.status && ['assigned', 'completed'].includes(req.body.status)) allowedFields.status = req.body.status;
 
       if (Object.keys(allowedFields).length === 0) {
         return res.status(400).json({ message: 'Нет данных для обновления' });
       }
 
       await assignment.update(allowedFields);
-      
-      // Получаем обновленное задание
-      const updatedAssignment = await db.Assignment.findByPk(id, {
-        include: [
-          { 
-            model: db.TechCard, 
-            as: 'techCard',
-            attributes: ['id', 'productName', 'description']
-          }
-        ]
-      });
-
-      return res.json({ 
-        message: 'Задание обновлено', 
-        assignment: updatedAssignment 
-      });
+    } else {
+      return res.status(403).json({ message: 'Доступ запрещён' });
     }
 
-    return res.status(403).json({ message: 'Доступ запрещён' });
+    const updatedAssignment = await db.Assignment.findByPk(id, {
+      include: [
+        { model: db.User, as: 'operator', attributes: ['id', 'firstName', 'lastName', 'username'] },
+        { model: db.TechCard, as: 'techCard', attributes: ['id', 'productName', 'description'] }
+      ]
+    });
 
+    res.json({ message: 'Задание обновлено', assignment: updatedAssignment });
   } catch (e) {
     console.error('Update assignment error:', e);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
 
-// ✅ ИСПРАВЛЕНИЕ: Удаление задания (мастер и админ)
+// Удалить задание
 exports.deleteAssignment = async (req, res) => {
   try {
     if (!hasManagePermission(req.user.role)) {
@@ -297,13 +176,6 @@ exports.deleteAssignment = async (req, res) => {
     }
 
     const { id } = req.params;
-    
-    // Проверяем существование задания
-    const assignment = await db.Assignment.findByPk(id);
-    if (!assignment) {
-      return res.status(404).json({ message: 'Задание не найдено' });
-    }
-
     const deleted = await db.Assignment.destroy({ where: { id } });
 
     if (!deleted) {
@@ -311,29 +183,41 @@ exports.deleteAssignment = async (req, res) => {
     }
 
     res.json({ message: 'Задание удалено успешно' });
-
   } catch (e) {
     console.error('Delete assignment error:', e);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
 
-// ✅ ИСПРАВЛЕНИЕ: Получить детальное задание по ID
+// Удалить все активные задания
+exports.deleteAllActiveAssignments = async (req, res) => {
+  try {
+    if (!hasManagePermission(req.user.role)) {
+      return res.status(403).json({ message: 'Доступ запрещён' });
+    }
+
+    const deletedCount = await db.Assignment.destroy({
+      where: { status: 'assigned' }
+    });
+
+    res.json({ 
+      message: `Успешно удалено ${deletedCount} активных заданий`,
+      deletedCount 
+    });
+  } catch (error) {
+    console.error('Delete all active assignments error:', error);
+    res.status(500).json({ message: 'Ошибка при удалении активных заданий' });
+  }
+};
+
+// Получить задание по ID
 exports.getAssignmentById = async (req, res) => {
   try {
     const { id } = req.params;
     const assignment = await db.Assignment.findByPk(id, {
       include: [
-        { 
-          model: db.User, 
-          as: 'operator', 
-          attributes: ['id', 'firstName', 'lastName', 'username'] 
-        },
-        { 
-          model: db.TechCard, 
-          as: 'techCard',
-          attributes: ['id', 'productName', 'description']
-        }
+        { model: db.User, as: 'operator', attributes: ['id', 'firstName', 'lastName', 'username'] },
+        { model: db.TechCard, as: 'techCard', attributes: ['id', 'productName', 'description'] }
       ]
     });
 
@@ -342,44 +226,33 @@ exports.getAssignmentById = async (req, res) => {
     }
 
     const user = req.user;
-
-    // ✅ ИСПРАВЛЕНИЕ: Упрощенная проверка прав доступа
-    if (hasManagePermission(user.role) || 
-        (assignment.operatorId === user.userId && user.role === 'employee')) {
+    if (hasManagePermission(user.role) || (assignment.operatorId === user.userId && user.role === 'employee')) {
       return res.json(assignment);
     }
 
     return res.status(403).json({ message: 'Доступ запрещён' });
-
   } catch (e) {
     console.error('Get assignment error:', e);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
 
-// ✅ НОВОЕ: Массовая загрузка заданий из Excel
+// Загрузка из Excel
 exports.uploadAssignmentsFromExcel = async (req, res) => {
   try {
-    // Проверка прав доступа
     if (!hasManagePermission(req.user.role)) {
       return res.status(403).json({ message: 'Доступ запрещён' });
     }
 
-    // Проверка наличия файла
     if (!req.file) {
       return res.status(400).json({ message: 'Excel файл не загружен' });
     }
 
-    console.log('📁 Загружен Excel файл:', req.file.filename);
-
-    // Парсим Excel файл
     const parser = new AssignmentExcelParser();
     const results = await parser.parseExcelFile(req.file.path, req.user.userId);
 
-    // Удаляем временный файл
-    fs.unlinkSync(req.file.path);
+    fs.unlinkSync(req.file.path); // Удаляем файл
 
-    // Возвращаем результаты
     res.json({
       message: 'Обработка Excel файла завершена',
       summary: {
@@ -390,23 +263,16 @@ exports.uploadAssignmentsFromExcel = async (req, res) => {
       },
       details: results
     });
-
   } catch (error) {
     console.error('Excel upload error:', error);
-    
-    // Удаляем файл в случае ошибки
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
-
-    res.status(500).json({ 
-      message: 'Ошибка обработки Excel файла', 
-      error: error.message 
-    });
+    res.status(500).json({ message: 'Ошибка обработки Excel файла' });
   }
 };
 
-// ✅ ИСПРАВЛЕНИЕ: Получить статистику по заданиям
+// Статистика заданий
 exports.getAssignmentStatistics = async (req, res) => {
   try {
     if (!hasManagePermission(req.user.role)) {
@@ -414,22 +280,15 @@ exports.getAssignmentStatistics = async (req, res) => {
     }
 
     const stats = await db.Assignment.findAll({
-      attributes: [
-        'status',
-        [db.sequelize.fn('COUNT', '*'), 'count']
-      ],
+      attributes: ['status', [db.sequelize.fn('COUNT', '*'), 'count']],
       group: ['status']
     });
 
     const totalAssignments = await db.Assignment.count();
-    
-    // ✅ ИСПРАВЛЕНИЕ: Исправлена опечатка db.Sequelize.Op -> db.sequelize.Op
     const completedToday = await db.Assignment.count({
       where: {
         status: 'completed',
-        updatedAt: {
-          [db.sequelize.Op.gte]: new Date(new Date().setHours(0, 0, 0, 0))
-        }
+        updatedAt: { [db.sequelize.Op.gte]: new Date(new Date().setHours(0, 0, 0, 0)) }
       }
     });
 
@@ -441,23 +300,8 @@ exports.getAssignmentStatistics = async (req, res) => {
         return acc;
       }, {})
     });
-
   } catch (error) {
     console.error('Statistics error:', error);
     res.status(500).json({ message: 'Ошибка получения статистики' });
   }
 };
-
-// В конец assignmentController.js добавьте для отладки:
-console.log('🔍 Assignment Controller exports:', {
-  getAssignments: typeof exports.getAssignments,
-  createAssignment: typeof exports.createAssignment,
-  updateAssignment: typeof exports.updateAssignment,
-  deleteAssignment: typeof exports.deleteAssignment,  
-  getAssignmentById: typeof exports.getAssignmentById,
-  uploadAssignmentsFromExcel: typeof exports.uploadAssignmentsFromExcel,
-  getAssignmentStatistics: typeof exports.getAssignmentStatistics,
-  uploadExcelMiddleware: typeof exports.uploadExcelMiddleware
-});
-
-
