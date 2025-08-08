@@ -1,19 +1,19 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 export const fetchTasks = async () => {
-  const response = await fetch(`${BASE_URL}/tasks`);
+  const response = await fetch(`${API_BASE}/tasks`);
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
   return response.json();
 };
 
 export const fetchTaskById = async (id: string) => {
-  const response = await fetch(`${BASE_URL}/tasks/${id}`);
+  const response = await fetch(`${API_BASE}/tasks/${id}`);
   if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
   return response.json();
 };
 
 export const createTask = async (data: object) => {
-  const response = await fetch(`${BASE_URL}/tasks`, {
+  const response = await fetch(`${API_BASE}/tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -23,7 +23,7 @@ export const createTask = async (data: object) => {
 };
 
 export const updateTask = async (id: string, updates: object) => {
-  const response = await fetch(`${BASE_URL}/tasks/${id}`, {
+  const response = await fetch(`${API_BASE}/tasks/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates),
@@ -33,7 +33,7 @@ export const updateTask = async (id: string, updates: object) => {
 };
 
 export const deleteTask = async (id: string) => {
-  const response = await fetch(`${BASE_URL}/tasks/${id}`, {
+  const response = await fetch(`${API_BASE}/tasks/${id}`, {
     method: 'DELETE',
   });
   if (!response.ok) throw new Error('Failed to delete task');

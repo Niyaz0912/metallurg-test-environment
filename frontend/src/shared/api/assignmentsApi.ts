@@ -1,14 +1,15 @@
 // frontend/src/shared/api/assignmentsApi.ts
+
 interface CreateAssignmentData {
+  taskDescription: string;
   operatorId: number;
+  machineNumber: string;
   shiftDate: string;
   shiftType: 'day' | 'night';
-  taskDescription: string;
-  machineNumber: string;
   detailName: string;
   customerName: string;
   plannedQuantity: number;
-  techCardId: number;
+  techCardId?: number; // опциональное поле
 }
 
 interface Assignment {
@@ -22,7 +23,7 @@ interface Assignment {
   customerName: string;
   plannedQuantity: number;
   actualQuantity: number | null;
-  techCardId: number;
+  techCardId?: number; // ✅ ИСПРАВЛЕНО: сделали опциональным для консистентности
   status: 'assigned' | 'completed';
   createdAt: string;
   updatedAt: string;
@@ -163,4 +164,6 @@ export const completeAssignment = async (id: number, actualQuantity: number) => 
   });
 };
 
+
 export type { Assignment, CreateAssignmentData };
+

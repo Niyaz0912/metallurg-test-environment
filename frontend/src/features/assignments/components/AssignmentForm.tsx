@@ -9,6 +9,14 @@ interface User {
   role: string;
 }
 
+interface TechCard {
+  id: number;
+  title: string;
+  version: string;
+  status: 'draft' | 'active' | 'archived';
+  productName: string;
+}
+
 interface AssignmentFormProps {
   onAssignmentCreated?: () => void;
 }
@@ -27,12 +35,14 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({ onAssignmentCreated }) 
   });
   
   const [operators, setOperators] = useState<User[]>([]);
+  const [techCards, setTechCards] = useState<TechCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
-  // Загрузка списка операторов
+  // Загрузка списка операторов и техкарт
   useEffect(() => {
     fetchOperators();
+    fetchTechCards();
   }, []);
 
   const fetchOperators = async () => {
@@ -58,6 +68,27 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({ onAssignmentCreated }) 
     }
   };
 
+  const fetchTechCards = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/techcards', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const cards = await response.json();
+        // Показываем только активные техкарты
+        const activeCards = cards.filter((card: TechCard) => card.status === 'active');
+        setTechCards(activeCards);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки технологических карт:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -80,7 +111,8 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({ onAssignmentCreated }) 
         detailName: formData.detailName,
         customerName: formData.customerName,
         plannedQuantity: Number(formData.plannedQuantity) || 0,
-        techCardId: Number(formData.techCardId) || 1, // Временно
+        ...(formData.techCardId && { techCardId: Number(formData.techCardId) }),
+
       });
 
       // Сброс формы
@@ -150,6 +182,29 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({ onAssignmentCreated }) 
               placeholder="Например: СТ-001"
             />
           </div>
+        </div>
+
+        {/* ✅ НОВОЕ ПОЛЕ: Выбор технологической карты */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Технологическая карта
+          </label>
+          <select
+            name="techCardId"
+            value={formData.techCardId}
+            onChange={handleInputChange}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+          >
+            <option value="">Выберите технологическую карту (опционально)</option>
+            {techCards.map(card => (
+              <option key={card.id} value={card.id}>
+                {card.title} v{card.version} - {card.productName}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-gray-500">
+            Привязка техкарты поможет оператору следовать технологическому процессу
+          </p>
         </div>
 
         <div className="grid grid-cols-3 gap-4">

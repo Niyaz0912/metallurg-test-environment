@@ -1,7 +1,7 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api'; 
 
 export const fetchProductionPlans = async () => {
-  const response = await fetch(`${BASE_URL}/productionPlans`);
+  const response = await fetch(`${API_BASE }/productionPlans`);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
@@ -9,7 +9,7 @@ export const fetchProductionPlans = async () => {
 };
 
 export const fetchProductionPlanById = async (id: string) => {
-  const response = await fetch(`${BASE_URL}/productionPlans/${id}`);
+  const response = await fetch(`${API_BASE }/productionPlans/${id}`);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
@@ -17,7 +17,7 @@ export const fetchProductionPlanById = async (id: string) => {
 };
 
 export const createProductionPlan = async (data: object) => {
-  const response = await fetch(`${BASE_URL}/productionPlans`, {
+  const response = await fetch(`${API_BASE }/productionPlans`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -29,7 +29,7 @@ export const createProductionPlan = async (data: object) => {
 };
 
 export const updateProductionPlan = async (id: string, updates: object) => {
-  const response = await fetch(`${BASE_URL}/productionPlans/${id}`, {
+  const response = await fetch(`${API_BASE }/productionPlans/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates),
@@ -41,7 +41,7 @@ export const updateProductionPlan = async (id: string, updates: object) => {
 };
 
 export const deleteProductionPlan = async (id: string) => {
-  const response = await fetch(`${BASE_URL}/productionPlans/${id}`, {
+  const response = await fetch(`${API_BASE }/productionPlans/${id}`, {
     method: 'DELETE',
   });
   if (!response.ok) {

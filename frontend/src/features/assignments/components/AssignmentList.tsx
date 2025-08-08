@@ -1,5 +1,6 @@
 // frontend/src/features/assignments/components/AssignmentList.tsx
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom'; // ✅ ДОБАВЛЕН ИМПОРТ
 import { fetchAssignments, updateAssignment, deleteAssignment, Assignment } from '../../../shared/api/assignmentsApi';
 import { useAuth } from '../../auth/hooks/useAuth';
 
@@ -209,6 +210,17 @@ const AssignmentList: React.FC<AssignmentListProps> = ({ userRole }) => {
                         Заказчик: {assignment.customerName}
                       </div>
                     )}
+                    {/* ✅ НОВОЕ: Ссылка на технологическую карту */}
+                    {assignment.techCardId && (
+                      <div className="mt-2">
+                        <Link 
+                          to={`/techcards/${assignment.techCardId}`}
+                          className="text-blue-600 hover:text-blue-800 text-xs font-medium inline-flex items-center"
+                        >
+                          🔧 Техкарта: {assignment.techCard?.productName || 'Просмотреть'}
+                        </Link>
+                      </div>
+                    )}
                   </td>
                   
                   {canManageAllAssignments && (
@@ -334,6 +346,18 @@ const AssignmentList: React.FC<AssignmentListProps> = ({ userRole }) => {
               </div>
             )}
             
+            {/* ✅ НОВОЕ: Ссылка на технологическую карту в мобильной версии */}
+            {assignment.techCardId && (
+              <div className="mb-3">
+                <Link 
+                  to={`/techcards/${assignment.techCardId}`}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center"
+                >
+                  🔧 Техкарта: {assignment.techCard?.productName || 'Просмотреть'}
+                </Link>
+              </div>
+            )}
+            
             {user?.id === assignment.operatorId && assignment.status === 'assigned' && (
               <div className="flex space-x-2">
                 <button
@@ -353,4 +377,3 @@ const AssignmentList: React.FC<AssignmentListProps> = ({ userRole }) => {
 };
 
 export default AssignmentList;
-
