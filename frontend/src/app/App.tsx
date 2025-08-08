@@ -8,6 +8,7 @@ import AuthSection from '../features/auth/AuthSection';
 import ProductionPlansPage from '../features/productionPlans/ProductionPlanPage';
 import Profile from '../features/users/components/Profile';
 import WikiSection from '../features/wiki/WikiSection';
+import TechCardsPage from '../features/techCard/TechCardsPage';
 import DepartmentPortal from '../features/departments/DepartmentPortal';
 import AdminPanel from '../features/users/AdminPanel';
 import PrivateRoute from './PrivateRoute';
@@ -75,6 +76,7 @@ const AppContent: React.FC = () => {
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/production-plans" element={<ProductionPlansPage />} />
                     <Route path="/assignments" element={<AssignmentsPage />} />
+                    <Route path="/techcards" element={<TechCardsPage />} />
                     
                     {/* Fallback - главная страница */}
                     <Route path="/main" element={<MainPage />} />

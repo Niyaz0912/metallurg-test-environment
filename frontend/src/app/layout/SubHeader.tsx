@@ -54,6 +54,20 @@ const SubHeader: React.FC = () => {
             </NavLink>
           </li>
 
+          {/* ✅ НОВАЯ ВКЛАДКА: Технологические карты */}
+          <li>
+            <NavLink
+              to="/techcards"
+              className={({ isActive }) =>
+                isActive || location.pathname.startsWith('/techcards')
+                  ? 'text-blue-600 border-b-2 border-blue-600 pb-2 inline-block'
+                  : 'text-gray-600 hover:text-blue-600 pb-2 inline-block'
+              }
+            >
+              🔧 Технологические карты
+            </NavLink>
+          </li>
+
           <li>
             <NavLink
               to="/documents"
@@ -99,3 +113,4 @@ const SubHeader: React.FC = () => {
 };
 
 export default SubHeader;
+
