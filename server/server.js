@@ -24,7 +24,7 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Настройка CORS
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'], // порты для Vite и CRA
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
   credentials: true
 }));
 
@@ -58,73 +58,21 @@ async function startServer() {
       }
     }
 
-    // ✅ ИСПРАВЛЕНИЕ: Безопасная загрузка роутов с обработкой ошибок
-    const routes = {};
-    
-    // Загружаем роуты по одному с обработкой ошибок
-    const routeConfigs = [
-      { name: 'departmentRoutes', path: './department/departmentRoutes', apiPath: '/api/departments' },
-      { name: 'userRoutes', path: './users/userRoutes', apiPath: '/api/users' },
-      { name: 'assignmentRoutes', path: './assignments/assignmentRoutes', apiPath: '/api/assignments' }
-    ];
+    // Загружаем роуты
+    const departmentRoutes = require('./department/departmentRoutes');
+    const userRoutes = require('./users/userRoutes');
+    const assignmentRoutes = require('./assignments/assignmentRoutes');
+    const taskRoutes = require('./tasks/taskRoutes');
+    const techCardRoutes = require('./techCards/techCardRoutes');
+    const productionPlanRoutes = require('./productionPlans/productionPlanRoutes');
 
-    // Временно отключаем проблемные роуты для диагностики
-    const potentiallyProblematicRoutes = [
-      { name: 'taskRoutes', path: './tasks', apiPath: '/api/tasks' },
-      { name: 'techCardRoutes', path: './techCards', apiPath: '/api/techCards' },
-      { name: 'productionPlanRoutes', path: './productionPlans', apiPath: '/api/productionPlans' }
-    ];
-
-    // Загружаем стабильные роуты
-    for (const config of routeConfigs) {
-      try {
-        routes[config.name] = require(config.path);
-        console.log(`✅ ${config.name} loaded successfully`);
-      } catch (error) {
-        console.error(`❌ Error loading ${config.name}:`, error.message);
-        // Создаем заглушку
-        routes[config.name] = express.Router();
-        routes[config.name].use((req, res) => {
-          res.status(503).json({ 
-            message: `${config.name} временно недоступен`, 
-            error: 'Module loading error' 
-          });
-        });
-      }
-    }
-
-    // Пытаемся загрузить потенциально проблемные роуты
-    for (const config of potentiallyProblematicRoutes) {
-      try {
-        routes[config.name] = require(config.path);
-        console.log(`✅ ${config.name} loaded successfully`);
-      } catch (error) {
-        console.error(`❌ Error loading ${config.name}:`, error.message);
-        console.error(`❌ Stack trace:`, error.stack);
-        
-        // Создаем заглушку для недоступного роута
-        routes[config.name] = express.Router();
-        routes[config.name].use((req, res) => {
-          res.status(503).json({ 
-            message: `${config.name.replace('Routes', '')} функциональность временно недоступна`, 
-            error: 'Module initialization error',
-            details: error.message
-          });
-        });
-        
-        console.log(`⚠️ ${config.name} заменён на заглушку`);
-      }
-    }
-
-    // Регистрируем все роуты (включая заглушки)
-    const allRouteConfigs = [...routeConfigs, ...potentiallyProblematicRoutes];
-    
-    for (const config of allRouteConfigs) {
-      if (routes[config.name]) {
-        app.use(config.apiPath, routes[config.name]);
-        console.log(`🔗 ${config.apiPath} registered`);
-      }
-    }
+    // Регистрируем роуты
+    app.use('/api/departments', departmentRoutes);
+    app.use('/api/users', userRoutes);
+    app.use('/api/assignments', assignmentRoutes);
+    app.use('/api/tasks', taskRoutes);
+    app.use('/api/techcards', techCardRoutes);
+    app.use('/api/productionPlans', productionPlanRoutes);
 
     console.log('🔗 API routes registration completed');
 
@@ -135,8 +83,7 @@ async function startServer() {
         database: db.sequelize.config.database,
         time: new Date().toISOString(),
         uptime: process.uptime(),
-        environment: process.env.NODE_ENV || 'development',
-        loadedRoutes: Object.keys(routes).map(key => key.replace('Routes', ''))
+        environment: process.env.NODE_ENV || 'development'
       });
     });
 
@@ -150,17 +97,15 @@ async function startServer() {
           '/api/departments - Department management',
           '/api/users - User management and authentication',
           '/api/assignments - Shift assignments management',
-          '/api/tasks - Task management (may be unavailable)',
-          '/api/techCards - Technical cards (may be unavailable)',
-          '/api/productionPlans - Production planning (may be unavailable)'
-        ],
-        note: 'Some endpoints may be temporarily unavailable due to module loading issues'
+          '/api/tasks - Task management',
+          '/api/techcards - Technical cards management',
+          '/api/productionPlans - Production planning'
+        ]
       });
     });
 
     // Обработка 404 для API маршрутов
     app.use('/api/*', (req, res) => {
-      console.log(`❌ API route not found: ${req.method} ${req.path}`);
       res.status(404).json({ 
         error: 'API Route not found',
         path: req.path,
@@ -177,7 +122,7 @@ async function startServer() {
     app.use((err, req, res, next) => {
       console.error('💥 Server error:', err.stack);
       
-      // Специальная обработка для Multer ошибок (загрузка файлов)
+      // Специальная обработка для Multer ошибок
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({ 
           error: 'Файл слишком большой',
@@ -195,8 +140,7 @@ async function startServer() {
       // Общая обработка ошибок
       const statusCode = err.statusCode || err.status || 500;
       res.status(statusCode).json({ 
-        error: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error',
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+        error: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error'
       });
     });
 
@@ -206,7 +150,6 @@ async function startServer() {
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`💾 Database: ${db.sequelize.config.database}`);
       console.log(`📁 Uploads directory: ${uploadsDir}`);
-      console.log(`🔧 Loaded routes: ${Object.keys(routes).length}`);
     });
 
     // Graceful shutdown
