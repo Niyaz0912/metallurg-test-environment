@@ -1,24 +1,8 @@
-// frontend/src/features/techCards/components/ExecutionTable.tsx
+// frontend/src/features/techCard/components/ExecutionTable.tsx
 import React, { useState, useMemo } from 'react';
-
-interface TechCardExecution {
-  id: number;
-  stageName: string;
-  quantityProduced: number;
-  executedAt: string;
-  qualityStatus?: 'OK' | 'NOK';
-  qualityComment?: string;
-  executor: {
-    id: number;
-    firstName: string;
-    lastName: string;
-  };
-  qualityInspector?: {
-    id: number;
-    firstName: string;
-    lastName: string;
-  };
-}
+import { 
+  type TechCardExecution 
+} from '../../../shared/api/techCardsApi';
 
 interface ExecutionTableProps {
   executions: TechCardExecution[];
@@ -31,264 +15,251 @@ const ExecutionTable: React.FC<ExecutionTableProps> = ({
   showFilters = true,
   compact = false
 }) => {
-  const [sortField, setSortField] = useState<'executedAt' | 'stageName' | 'quantityProduced'>('executedAt');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [filterStage, setFilterStage] = useState('');
-  const [filterQuality, setFilterQuality] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'executor' | 'quantity' | 'setup'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [filterExecutor, setFilterExecutor] = useState<string>('all');
+  const [filterSetup, setFilterSetup] = useState<string>('all');
 
-  // Получаем уникальные этапы для фильтра
-  const uniqueStages = useMemo(() => {
-    const stages = Array.from(new Set(executions.map(exec => exec.stageName)));
-    return stages.sort();
+  // Получение уникальных исполнителей
+  const uniqueExecutors = useMemo(() => {
+    const executors = executions.map(exec => ({
+      id: exec.executor.id,
+      name: `${exec.executor.firstName} ${exec.executor.lastName}`
+    }));
+    
+    const unique = executors.filter((executor, index, self) => 
+      index === self.findIndex(e => e.id === executor.id)
+    );
+    
+    return unique.sort((a, b) => a.name.localeCompare(b.name));
+  }, [executions]);
+
+  // Получение уникальных установок
+  const uniqueSetups = useMemo(() => {
+    const setups = [...new Set(executions.map(exec => exec.setupNumber || 1))];
+    return setups.sort((a, b) => a - b);
   }, [executions]);
 
   // Фильтрация и сортировка
-  const filteredAndSortedExecutions = useMemo(() => {
-    let filtered = executions;
+  const processedExecutions = useMemo(() => {
+    let filtered = [...executions];
 
-    // Фильтр по этапу
-    if (filterStage) {
-      filtered = filtered.filter(exec => exec.stageName === filterStage);
+    // Фильтрация по исполнителю
+    if (filterExecutor !== 'all') {
+      filtered = filtered.filter(exec => exec.executor.id.toString() === filterExecutor);
     }
 
-    // Фильтр по качеству
-    if (filterQuality) {
-      if (filterQuality === 'none') {
-        filtered = filtered.filter(exec => !exec.qualityStatus);
-      } else {
-        filtered = filtered.filter(exec => exec.qualityStatus === filterQuality);
-      }
+    // Фильтрация по установке
+    if (filterSetup !== 'all') {
+      filtered = filtered.filter(exec => (exec.setupNumber || 1).toString() === filterSetup);
     }
 
     // Сортировка
     filtered.sort((a, b) => {
-      let aValue, bValue;
+      let comparison = 0;
 
-      switch (sortField) {
-        case 'executedAt':
-          aValue = new Date(a.executedAt).getTime();
-          bValue = new Date(b.executedAt).getTime();
+      switch (sortBy) {
+        case 'date':
+          comparison = new Date(a.executedAt).getTime() - new Date(b.executedAt).getTime();
           break;
-        case 'stageName':
-          aValue = a.stageName.toLowerCase();
-          bValue = b.stageName.toLowerCase();
+        case 'executor':
+          const nameA = `${a.executor.firstName} ${a.executor.lastName}`;
+          const nameB = `${b.executor.firstName} ${b.executor.lastName}`;
+          comparison = nameA.localeCompare(nameB);
           break;
-        case 'quantityProduced':
-          aValue = a.quantityProduced;
-          bValue = b.quantityProduced;
+        case 'quantity':
+          comparison = a.quantityProduced - b.quantityProduced;
+          break;
+        case 'setup':
+          comparison = (a.setupNumber || 1) - (b.setupNumber || 1);
           break;
         default:
-          return 0;
+          comparison = 0;
       }
 
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
+      return sortOrder === 'asc' ? comparison : -comparison;
     });
 
     return filtered;
-  }, [executions, filterStage, filterQuality, sortField, sortDirection]);
+  }, [executions, sortBy, sortOrder, filterExecutor, filterSetup]);
 
-  // Обработчик сортировки
-  const handleSort = (field: 'executedAt' | 'stageName' | 'quantityProduced') => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+  const handleSort = (field: typeof sortBy) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortField(field);
-      setSortDirection('desc');
+      setSortBy(field);
+      setSortOrder('asc');
     }
   };
 
-  // Статистика
-  const totalQuantity = executions.reduce((sum, exec) => sum + exec.quantityProduced, 0);
-  const okCount = executions.filter(exec => exec.qualityStatus === 'OK').length;
-  const nokCount = executions.filter(exec => exec.qualityStatus === 'NOK').length;
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const getSortIcon = (field: typeof sortBy) => {
+    if (sortBy !== field) return '';
+    return sortOrder === 'asc' ? ' ↑' : ' ↓';
   };
 
-  const getSortIcon = (field: string) => {
-    if (sortField !== field) return '↕️';
-    return sortDirection === 'asc' ? '↑' : '↓';
-  };
+  const totalQuantity = processedExecutions.reduce((sum, exec) => sum + exec.quantityProduced, 0);
 
   if (executions.length === 0) {
     return (
-      <div className="text-center py-8">
-        <div className="text-gray-400 text-4xl mb-2">📝</div>
-        <p className="text-gray-500">Пока нет записей о выполнении</p>
+      <div className="text-center py-8 bg-gray-50 rounded-lg">
+        <div className="text-4xl text-gray-400 mb-3">📝</div>
+        <p className="text-gray-500">Нет записей о выполнении</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Статистика */}
-      {!compact && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-blue-50 rounded-lg p-3">
-            <p className="text-sm text-blue-600">Всего записей</p>
-            <p className="text-xl font-bold text-blue-900">{executions.length}</p>
-          </div>
-          <div className="bg-green-50 rounded-lg p-3">
-            <p className="text-sm text-green-600">Произведено</p>
-            <p className="text-xl font-bold text-green-900">{totalQuantity}</p>
-          </div>
-          <div className="bg-emerald-50 rounded-lg p-3">
-            <p className="text-sm text-emerald-600">Качество OK</p>
-            <p className="text-xl font-bold text-emerald-900">{okCount}</p>
-          </div>
-          <div className="bg-red-50 rounded-lg p-3">
-            <p className="text-sm text-red-600">Дефекты NOK</p>
-            <p className="text-xl font-bold text-red-900">{nokCount}</p>
-          </div>
-        </div>
-      )}
-
       {/* Фильтры */}
       {showFilters && (
-        <div className="flex flex-wrap gap-4 items-center bg-gray-50 p-4 rounded-lg">
+        <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-lg">
           <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-600">Этап:</label>
+            <label className="text-sm font-medium text-gray-700">Исполнитель:</label>
             <select
-              value={filterStage}
-              onChange={(e) => setFilterStage(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500"
+              value={filterExecutor}
+              onChange={(e) => setFilterExecutor(e.target.value)}
+              className="px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="">Все этапы</option>
-              {uniqueStages.map(stage => (
-                <option key={stage} value={stage}>{stage}</option>
+              <option value="all">Все</option>
+              {uniqueExecutors.map(executor => (
+                <option key={executor.id} value={executor.id.toString()}>
+                  {executor.name}
+                </option>
               ))}
             </select>
           </div>
-          
+
           <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-600">Качество:</label>
+            <label className="text-sm font-medium text-gray-700">Установка:</label>
             <select
-              value={filterQuality}
-              onChange={(e) => setFilterQuality(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500"
+              value={filterSetup}
+              onChange={(e) => setFilterSetup(e.target.value)}
+              className="px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="">Все</option>
-              <option value="OK">OK</option>
-              <option value="NOK">NOK</option>
-              <option value="none">Не указано</option>
+              <option value="all">Все</option>
+              {uniqueSetups.map(setup => (
+                <option key={setup} value={setup.toString()}>
+                  Установка {setup}
+                </option>
+              ))}
             </select>
           </div>
 
-          {(filterStage || filterQuality) && (
-            <button
-              onClick={() => {
-                setFilterStage('');
-                setFilterQuality('');
-              }}
-              className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
-            >
-              Сбросить фильтры
-            </button>
-          )}
-
           <div className="ml-auto text-sm text-gray-600">
-            Показано: {filteredAndSortedExecutions.length} из {executions.length}
+            Показано: {processedExecutions.length} из {executions.length} записей
+            {totalQuantity > 0 && (
+              <span className="ml-4 font-medium">
+                Итого: {totalQuantity.toLocaleString()} шт
+              </span>
+            )}
           </div>
         </div>
       )}
 
       {/* Таблица */}
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse border border-gray-300 bg-white">
-          <thead>
-            <tr className="bg-gray-50">
+      <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
               <th 
-                className="border border-gray-300 px-4 py-3 text-left cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('executedAt')}
+                className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('date')}
               >
-                <div className="flex items-center space-x-1">
-                  <span>Дата</span>
-                  <span className="text-xs">{getSortIcon('executedAt')}</span>
-                </div>
+                📅 Дата и время{getSortIcon('date')}
               </th>
               <th 
-                className="border border-gray-300 px-4 py-3 text-left cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('stageName')}
+                className="px-4 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('executor')}
               >
-                <div className="flex items-center space-x-1">
-                  <span>Этап</span>
-                  <span className="text-xs">{getSortIcon('stageName')}</span>
-                </div>
+                👤 Исполнитель{getSortIcon('executor')}
               </th>
-              <th className="border border-gray-300 px-4 py-3 text-left">Исполнитель</th>
               <th 
-                className="border border-gray-300 px-4 py-3 text-center cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('quantityProduced')}
+                className="px-4 py-3 text-center text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('quantity')}
               >
-                <div className="flex items-center justify-center space-x-1">
-                  <span>Кол-во</span>
-                  <span className="text-xs">{getSortIcon('quantityProduced')}</span>
-                </div>
+                📊 Количество{getSortIcon('quantity')}
               </th>
-              <th className="border border-gray-300 px-4 py-3 text-center">Качество</th>
-              {!compact && <th className="border border-gray-300 px-4 py-3 text-left">Комментарий</th>}
+              <th 
+                className="px-4 py-3 text-center text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('setup')}
+              >
+                🔧 Установка{getSortIcon('setup')}
+              </th>
             </tr>
           </thead>
-          <tbody>
-            {filteredAndSortedExecutions.map((execution) => (
-              <tr key={execution.id} className="hover:bg-gray-50">
-                <td className="border border-gray-300 px-4 py-3 text-sm">
-                  {formatDate(execution.executedAt)}
+          <tbody className="divide-y divide-gray-200">
+            {processedExecutions.map((execution, index) => (
+              <tr 
+                key={execution.id} 
+                className={`hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}
+              >
+                <td className="px-4 py-3 text-sm text-gray-900">
+                  <div>
+                    <div className="font-medium">
+                      {new Date(execution.executedAt).toLocaleDateString('ru-RU')}
+                    </div>
+                    <div className="text-gray-500">
+                      {new Date(execution.executedAt).toLocaleTimeString('ru-RU', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
                 </td>
-                <td className="border border-gray-300 px-4 py-3">
-                  <span className="font-medium text-gray-900">{execution.stageName}</span>
+                
+                <td className="px-4 py-3 text-sm">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xs font-medium mr-3">
+                      {execution.executor.firstName.charAt(0)}{execution.executor.lastName.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">
+                        {execution.executor.firstName} {execution.executor.lastName}
+                      </div>
+                    </div>
+                  </div>
                 </td>
-                <td className="border border-gray-300 px-4 py-3">
-                  <span className="text-gray-700">
-                    {execution.executor.firstName} {execution.executor.lastName}
+                
+                <td className="px-4 py-3 text-center">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                    {execution.quantityProduced.toLocaleString()} шт
                   </span>
                 </td>
-                <td className="border border-gray-300 px-4 py-3 text-center">
-                  <span className="font-semibold text-gray-900">
-                    {execution.quantityProduced}
+                
+                <td className="px-4 py-3 text-center">
+                  <span className="inline-flex items-center px-2 py-1 rounded text-sm font-medium bg-blue-100 text-blue-800">
+                    #{execution.setupNumber || 1}
                   </span>
                 </td>
-                <td className="border border-gray-300 px-4 py-3 text-center">
-                  {execution.qualityStatus ? (
-                    <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                      execution.qualityStatus === 'OK' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {execution.qualityStatus === 'OK' ? '✅ OK' : '❌ NOK'}
-                    </span>
-                  ) : (
-                    <span className="text-gray-400 text-sm">-</span>
-                  )}
-                </td>
-                {!compact && (
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-600">
-                    {execution.qualityComment ? (
-                      <span title={execution.qualityComment}>
-                        {execution.qualityComment.length > 50 
-                          ? `${execution.qualityComment.substring(0, 50)}...`
-                          : execution.qualityComment
-                        }
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
-                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Итоги */}
+      {processedExecutions.length > 0 && (
+        <div className="bg-gray-50 rounded-lg p-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{processedExecutions.length}</p>
+              <p className="text-sm text-gray-600">Записей</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-green-600">{totalQuantity.toLocaleString()}</p>
+              <p className="text-sm text-gray-600">Произведено</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-blue-600">{uniqueExecutors.length}</p>
+              <p className="text-sm text-gray-600">Операторов</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-purple-600">{uniqueSetups.length}</p>
+              <p className="text-sm text-gray-600">Установок</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
