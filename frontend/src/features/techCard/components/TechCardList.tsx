@@ -1,29 +1,13 @@
-// frontend/src/features/techCards/components/TechCardList.tsx
-import React from 'react';
-
-interface TechCard {
-  id: number;
-  productName: string;
-  partNumber?: string;
-  description?: string;
-  drawingUrl?: string;
-  specifications?: any;
-  productionStages?: any[];
-  estimatedTimePerUnit?: number;
-  notes?: string;
-  status: 'draft' | 'active' | 'archived';
-  version: string;
-  totalUsageCount: number;
-  totalProducedQuantity: number;
-  createdAt: string;
-  updatedAt: string;
-  creator?: {
-    id: number;
-    firstName: string;
-    lastName: string;
-  };
-  executions?: any[];
-}
+// frontend/src/features/techCard/components/TechCardList.tsx
+import React, { useState } from 'react';
+import { 
+  type TechCard,
+  getTechCardProgress,
+  // 🆕 Новые импорты
+  type TechCardPriority,
+  isTechCardOverdue
+} from '../../../shared/api/techCardsApi';
+import TechCardCard from './TechCardCard';
 
 interface TechCardListProps {
   techCards: TechCard[];
@@ -31,6 +15,7 @@ interface TechCardListProps {
   onEdit?: (techCard: TechCard) => void;
   onDelete?: (techCard: TechCard) => void;
   onStatusChange?: (techCard: TechCard, status: 'draft' | 'active' | 'archived') => void;
+  compact?: boolean;
 }
 
 const TechCardList: React.FC<TechCardListProps> = ({
@@ -38,205 +23,190 @@ const TechCardList: React.FC<TechCardListProps> = ({
   onView,
   onEdit,
   onDelete,
-  onStatusChange
+  onStatusChange,
+  compact = false
 }) => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'active': return 'bg-green-100 text-green-800 border-green-200';
-      case 'archived': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  const [sortBy, setSortBy] = useState<'name' | 'customer' | 'order' | 'progress' | 'date' | 'priority'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  // 🆕 Фильтр по приоритету
+  const [priorityFilter, setPriorityFilter] = useState<TechCardPriority | 'all'>('all');
+
+  // 🆕 Фильтрация по приоритету
+  const filteredTechCards = techCards.filter(card => 
+    priorityFilter === 'all' || card.priority === priorityFilter
+  );
+
+  // Сортировка техкарт
+  const sortedTechCards = [...filteredTechCards].sort((a, b) => {
+    let comparison = 0;
+
+    switch (sortBy) {
+      case 'name':
+        comparison = a.productName.localeCompare(b.productName);
+        break;
+      case 'customer':
+        comparison = a.customer.localeCompare(b.customer);
+        break;
+      case 'order':
+        comparison = a.order.localeCompare(b.order);
+        break;
+      case 'progress':
+        const progressA = getTechCardProgress(a);
+        const progressB = getTechCardProgress(b);
+        comparison = progressA - progressB;
+        break;
+      case 'date':
+        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        break;
+      // 🆕 Сортировка по приоритету
+      case 'priority':
+        const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+        comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
+        break;
+      default:
+        comparison = 0;
+    }
+
+    return sortOrder === 'asc' ? comparison : -comparison;
+  });
+
+  const handleSortChange = (newSortBy: typeof sortBy) => {
+    if (sortBy === newSortBy) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(newSortBy);
+      setSortOrder('asc');
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'draft': return 'Черновик';
-      case 'active': return 'Активная';
-      case 'archived': return 'Архив';
-      default: return status;
-    }
+  const getSortIcon = (field: typeof sortBy) => {
+    if (sortBy !== field) return '↕️';
+    return sortOrder === 'asc' ? '↑' : '↓';
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  const handleStatusChange = (techCard: TechCard, newStatus: 'draft' | 'active' | 'archived') => {
-    if (onStatusChange && techCard.status !== newStatus) {
-      onStatusChange(techCard, newStatus);
-    }
-  };
+  if (techCards.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-gray-400 text-6xl mb-4">📄</div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Нет техкарт</h3>
+        <p className="text-gray-500">Техкарты появятся после создания</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {techCards.map((techCard) => (
-        <div
-          key={techCard.id}
-          className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200"
-        >
-          {/* Заголовок карточки */}
-          <div className="p-4 border-b border-gray-100">
-            <div className="flex justify-between items-start mb-2">
-              <h3 
-                className="font-semibold text-gray-900 text-lg line-clamp-2 cursor-pointer hover:text-indigo-600"
-                onClick={() => onView(techCard)}
-                title={techCard.productName}
-              >
-                {techCard.productName}
-              </h3>
-              <div className="flex flex-col items-end space-y-1">
-                <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(techCard.status)}`}>
-                  {getStatusText(techCard.status)}
-                </span>
-                {onStatusChange && (
-                  <div className="relative group">
-                    <button className="text-gray-400 hover:text-gray-600 text-sm">
-                      ⚙️
-                    </button>
-                    <div className="absolute right-0 top-6 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity bg-white border rounded shadow-lg z-10 min-w-[120px]">
-                      <button
-                        onClick={() => handleStatusChange(techCard, 'draft')}
-                        className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-                        disabled={techCard.status === 'draft'}
-                      >
-                        📝 Черновик
-                      </button>
-                      <button
-                        onClick={() => handleStatusChange(techCard, 'active')}
-                        className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-                        disabled={techCard.status === 'active'}
-                      >
-                        ✅ Активная
-                      </button>
-                      <button
-                        onClick={() => handleStatusChange(techCard, 'archived')}
-                        className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-                        disabled={techCard.status === 'archived'}
-                      >
-                        📁 Архив
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {techCard.partNumber && (
-              <p className="text-sm text-indigo-600 font-medium">
-                Артикул: {techCard.partNumber}
-              </p>
-            )}
-            
-            {techCard.description && (
-              <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                {techCard.description}
-              </p>
-            )}
-          </div>
-
-          {/* Превью чертежа */}
-          {techCard.drawingUrl && (
-            <div className="p-4 border-b border-gray-100">
-              <div className="h-32 bg-gray-50 rounded-lg overflow-hidden">
-                <img 
-                  src={techCard.drawingUrl}
-                  alt="Превью чертежа"
-                  className="w-full h-full object-cover cursor-pointer hover:opacity-75"
-                  onClick={() => onView(techCard)}
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    target.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400 text-sm">Чертеж недоступен</div>';
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Статистика */}
-          <div className="p-4 border-b border-gray-100">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-lg font-bold text-gray-900">{techCard.totalUsageCount}</p>
-                <p className="text-xs text-gray-500">Использований</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold text-green-600">{techCard.totalProducedQuantity}</p>
-                <p className="text-xs text-gray-500">Произведено</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold text-blue-600">{techCard.executions?.length || 0}</p>
-                <p className="text-xs text-gray-500">Записей</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Дополнительная информация */}
-          <div className="p-4 border-b border-gray-100 text-sm text-gray-600">
-            <div className="space-y-1">
-              <div className="flex justify-between">
-                <span>Версия:</span>
-                <span className="font-medium">{techCard.version}</span>
-              </div>
-              {techCard.estimatedTimePerUnit && (
-                <div className="flex justify-between">
-                  <span>Время/деталь:</span>
-                  <span className="font-medium">{techCard.estimatedTimePerUnit} мин</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span>Создана:</span>
-                <span className="font-medium">{formatDate(techCard.createdAt)}</span>
-              </div>
-              {techCard.creator && (
-                <div className="flex justify-between">
-                  <span>Автор:</span>
-                  <span className="font-medium">
-                    {techCard.creator.firstName} {techCard.creator.lastName}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Кнопки действий */}
-          <div className="p-4">
-            <div className="flex space-x-2">
-              <button
-                onClick={() => onView(techCard)}
-                className="flex-1 px-3 py-2 bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100 transition-colors text-sm font-medium"
-              >
-                👁️ Просмотр
-              </button>
-              {onEdit && (
-                <button
-                  onClick={() => onEdit(techCard)}
-                  className="flex-1 px-3 py-2 bg-green-50 text-green-600 rounded hover:bg-green-100 transition-colors text-sm font-medium"
-                >
-                  ✏️ Править
-                </button>
-              )}
-              {onDelete && (
-                <button
-                  onClick={() => onDelete(techCard)}
-                  className="px-3 py-2 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors text-sm font-medium"
-                  title="Удалить"
-                >
-                  🗑️
-                </button>
-              )}
-            </div>
-          </div>
+    <div className="space-y-4">
+      {/* 🆕 Панель фильтрации и сортировки */}
+      <div className="flex flex-wrap items-center gap-2 p-4 bg-gray-50 rounded-lg">
+        {/* Фильтр по приоритету */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">Приоритет:</span>
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value as TechCardPriority | 'all')}
+            className="px-2 py-1 text-sm border border-gray-300 rounded"
+          >
+            <option value="all">Все</option>
+            <option value="urgent">🔴 Срочный</option>
+            <option value="high">🟠 Высокий</option>
+            <option value="medium">🟡 Средний</option>
+            <option value="low">🟢 Низкий</option>
+          </select>
         </div>
-      ))}
+
+        <div className="border-l border-gray-300 h-6 mx-2"></div>
+
+        <span className="text-sm font-medium text-gray-700">Сортировать:</span>
+        
+        <button
+          onClick={() => handleSortChange('date')}
+          className={`px-3 py-1 text-sm rounded transition-colors ${
+            sortBy === 'date'
+              ? 'bg-indigo-100 text-indigo-700 font-medium'
+              : 'bg-white text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          Дате {getSortIcon('date')}
+        </button>
+
+        {/* 🆕 Сортировка по приоритету */}
+        <button
+          onClick={() => handleSortChange('priority')}
+          className={`px-3 py-1 text-sm rounded transition-colors ${
+            sortBy === 'priority'
+              ? 'bg-indigo-100 text-indigo-700 font-medium'
+              : 'bg-white text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          Приоритету {getSortIcon('priority')}
+        </button>
+
+        <button
+          onClick={() => handleSortChange('name')}
+          className={`px-3 py-1 text-sm rounded transition-colors ${
+            sortBy === 'name'
+              ? 'bg-indigo-100 text-indigo-700 font-medium'
+              : 'bg-white text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          Названию {getSortIcon('name')}
+        </button>
+
+        <button
+          onClick={() => handleSortChange('customer')}
+          className={`px-3 py-1 text-sm rounded transition-colors ${
+            sortBy === 'customer'
+              ? 'bg-indigo-100 text-indigo-700 font-medium'
+              : 'bg-white text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          Заказчику {getSortIcon('customer')}
+        </button>
+
+        <button
+          onClick={() => handleSortChange('progress')}
+          className={`px-3 py-1 text-sm rounded transition-colors ${
+            sortBy === 'progress'
+              ? 'bg-indigo-100 text-indigo-700 font-medium'
+              : 'bg-white text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          Прогрессу {getSortIcon('progress')}
+        </button>
+
+        {/* 🆕 Счетчики */}
+        <div className="ml-auto flex items-center gap-4 text-sm text-gray-500">
+          <span>Показано: {filteredTechCards.length}</span>
+          <span>Всего: {techCards.length}</span>
+          {/* Просроченные */}
+          {techCards.filter(isTechCardOverdue).length > 0 && (
+            <span className="text-red-600 font-medium">
+              ⚠️ Просрочено: {techCards.filter(isTechCardOverdue).length}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Список карточек */}
+      <div className={`grid gap-4 ${
+        compact 
+          ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' 
+          : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'
+      }`}>
+        {sortedTechCards.map((techCard) => (
+          <TechCardCard
+            key={techCard.id}
+            techCard={techCard}
+            onView={onView}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onStatusChange={onStatusChange}
+            compact={compact}
+          />
+        ))}
+      </div>
     </div>
   );
 };
 
 export default TechCardList;
-
