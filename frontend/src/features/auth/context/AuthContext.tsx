@@ -32,16 +32,61 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  const fetchUserData = async () => {
+  // 🔍 ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ: Определение маршрута
+  const getRedirectPath = (user: User): string => {
+    console.log('🎯 === НАЧАЛО ОПРЕДЕЛЕНИЯ МАРШРУТА ===');
+    console.log('📊 Полные данные пользователя:', JSON.stringify(user, null, 2));
+    console.log('🔍 user.role:', user.role);
+    console.log('🔍 user.departmentId:', user.departmentId);
+    console.log('🔍 user.department:', user.department);
+    
+    let redirectPath = '/techcards'; // Значение по умолчанию
+    
+    switch (user.role) {
+      case 'admin':
+      case 'master':
+        redirectPath = '/admin';
+        console.log('🔧 Определен как админ/мастер -> /admin');
+        break;
+      
+      case 'director':
+        redirectPath = '/dashboard';
+        console.log('👔 Определен как директор -> /dashboard');
+        break;
+      
+      case 'employee':
+      default:
+        console.log('👨‍💼 Определен как сотрудник');
+        if (user.departmentId) {
+          redirectPath = `/departments/${user.departmentId}`;
+          console.log(`🏢 У сотрудника есть departmentId: ${user.departmentId}`);
+          console.log(`🏢 Сформирован путь департамента: ${redirectPath}`);
+        } else {
+          redirectPath = '/techcards';
+          console.log('❌ У сотрудника НЕТ departmentId -> /techcards');
+        }
+        break;
+    }
+    
+    console.log('✅ ИТОГОВЫЙ ПУТЬ РЕДИРЕКТА:', redirectPath);
+    console.log('🎯 === КОНЕЦ ОПРЕДЕЛЕНИЯ МАРШРУТА ===');
+    return redirectPath;
+  };
+
+  const fetchUserData = async (shouldRedirect: boolean = false) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
+        console.log('❌ Токен отсутствует в localStorage');
         setLoading(false);
-        return;
+        return null;
       }
 
-      console.log('🔄 Запрос данных пользователя...');
+      console.log('🔄 === НАЧАЛО ЗАГРУЗКИ ДАННЫХ ПОЛЬЗОВАТЕЛЯ ===');
+      console.log('🔑 Токен найден:', token.substring(0, 20) + '...');
+      console.log('🚀 shouldRedirect:', shouldRedirect);
       
       const response = await fetch('/api/users/me', {
         method: 'GET',
@@ -55,10 +100,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Получены данные от сервера:', data);
+        console.log('✅ RAW данные от сервера:', JSON.stringify(data, null, 2));
         
         if (data.user) {
-          setUser({
+          const userData = {
             id: data.user.id,
             firstName: data.user.firstName,
             lastName: data.user.lastName,
@@ -66,37 +111,99 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             position: data.user.position,
             departmentId: data.user.departmentId,
             department: data.user.department
-          });
-          console.log('✅ Пользователь установлен:', data.user);
+          };
+          
+          console.log('📋 Обработанные данные пользователя:', JSON.stringify(userData, null, 2));
+          setUser(userData);
+          console.log('✅ Пользователь установлен в состояние');
+
+          // 🔍 ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ РЕДИРЕКТА
+          if (shouldRedirect) {
+            console.log('🚀 === НАЧАЛО ПРОЦЕССА РЕДИРЕКТА ===');
+            console.log('⏰ Текущий URL:', window.location.href);
+            
+            const redirectPath = getRedirectPath(userData);
+            
+            console.log('🎯 Пытаемся перейти на:', redirectPath);
+            console.log('🔄 Вызываем navigate...');
+            
+            // Добавляем небольшую задержку для отладки
+            setTimeout(() => {
+              console.log('⏳ Выполняем navigate через setTimeout');
+              navigate(redirectPath);
+              
+              // Проверяем результат через секунду
+              setTimeout(() => {
+                console.log('📍 URL после navigate:', window.location.href);
+                console.log('🚀 === КОНЕЦ ПРОЦЕССА РЕДИРЕКТА ===');
+              }, 1000);
+            }, 100);
+          }
+
+          console.log('🔄 === КОНЕЦ ЗАГРУЗКИ ДАННЫХ ПОЛЬЗОВАТЕЛЯ ===');
+          return userData;
+        } else {
+          console.error('❌ В ответе сервера отсутствует user');
         }
       } else {
         const errorText = await response.text();
         console.error('❌ Ошибка получения данных:', response.status, errorText);
         localStorage.removeItem('token');
         setUser(null);
+        return null;
       }
     } catch (error) {
       console.error('❌ Ошибка запроса:', error);
       localStorage.removeItem('token');
       setUser(null);
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
+  // useEffect для проверки токена при загрузке (без редиректа)
   useEffect(() => {
-    fetchUserData();
+    console.log('🚀 useEffect: Проверка авторизации при загрузке');
+    const checkAuth = async () => {
+      await fetchUserData(false); // Не редиректим при автологине
+    };
+
+    checkAuth();
   }, []);
 
+  // Функция login с автоматическим редиректом
   const login = async (token: string) => {
-    localStorage.setItem('token', token);
-    setLoading(true);
-    await fetchUserData();
+    try {
+      console.log('🔐 === НАЧАЛО ПРОЦЕССА ЛОГИНА ===');
+      console.log('🔑 Получен токен для логина:', token.substring(0, 20) + '...');
+      
+      setLoading(true);
+      localStorage.setItem('token', token);
+      console.log('💾 Токен сохранен в localStorage');
+      
+      // Получаем данные пользователя и сразу редиректим
+      console.log('📡 Загружаем данные пользователя с редиректом...');
+      await fetchUserData(true);
+      
+      console.log('🔐 === КОНЕЦ ПРОЦЕССА ЛОГИНА ===');
+    } catch (error) {
+      console.error('❌ Ошибка авторизации:', error);
+      localStorage.removeItem('token');
+      setUser(null);
+      setLoading(false);
+    }
   };
 
+  // Функция logout с редиректом на страницу входа
   const logout = () => {
+    console.log('👋 === НАЧАЛО ВЫХОДА ===');
+    console.log('🗑️ Удаляем токен из localStorage');
     localStorage.removeItem('token');
     setUser(null);
+    console.log('🚪 Редирект на /login');
+    navigate('/login');
+    console.log('👋 === КОНЕЦ ВЫХОДА ===');
   };
 
   const value: AuthContextType = {
@@ -107,7 +214,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading
   };
 
-  console.log('🔍 AuthContext состояние:', { user, loading, isAuthenticated: !!user && !loading });
+  console.log('🔍 AuthContext состояние:', { 
+    user: user ? { 
+      id: user.id, 
+      role: user.role, 
+      departmentId: user.departmentId,
+      department: user.department?.name 
+    } : null, 
+    loading, 
+    isAuthenticated: !!user && !loading 
+  });
 
   return (
     <AuthContext.Provider value={value}>

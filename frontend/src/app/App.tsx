@@ -1,6 +1,6 @@
 // frontend/src/app/App.tsx
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Header from './layout/Header';
 import SubHeader from './layout/SubHeader';
 import MainPage from './MainPage';
@@ -28,7 +28,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <Router>
+    <>
       {/* Header всегда виден */}
       <Header />
 
@@ -88,7 +88,7 @@ const AppContent: React.FC = () => {
           </Routes>
         </div>
       </main>
-    </Router>
+    </>
   );
 };
 
