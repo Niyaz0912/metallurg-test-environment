@@ -5,7 +5,7 @@ const path = require('path');
 const techCardController = require('./techCardController');
 const { authenticateToken } = require('../users/authMiddleware');
 
-// Настройка хранилища Multer
+// Настройка хранилища Multer для PDF файлов
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, path.join(__dirname, '../uploads'));
@@ -14,7 +14,7 @@ const storage = multer.diskStorage({
     // сохраняем с уникальным именем
     const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
-    cb(null, `drawing-${unique}${ext}`);
+    cb(null, `techcard-${unique}${ext}`); // ✅ Переименовано с drawing на techcard
   }
 });
 
@@ -37,17 +37,62 @@ const upload = multer({
   }
 });
 
-// Базовые CRUD операции
+// ========== ОСНОВНЫЕ CRUD ОПЕРАЦИИ ==========
+
+// GET /api/techcards - список всех техкарт (с автоматическим логированием при просмотре отдельной)
 router.get('/', authenticateToken, techCardController.getAllTechCards);
+
+// POST /api/techcards - создание новой техкарты (упрощенное: 5 полей)
 router.post('/', authenticateToken, techCardController.createTechCard);
+
+// GET /api/techcards/:id - просмотр конкретной техкарты (с автоматическим логированием)
 router.get('/:id', authenticateToken, techCardController.getTechCardById);
+
+// PUT /api/techcards/:id - обновление техкарты (упрощенное)
 router.put('/:id', authenticateToken, techCardController.updateTechCard);
+
+// DELETE /api/techcards/:id - удаление техкарты
 router.delete('/:id', authenticateToken, techCardController.deleteTechCard);
 
-// Операции с выполнениями этапов
+// ========== ОПЕРАЦИИ С ВЫПОЛНЕНИЯМИ ==========
+
+// POST /api/techcards/:id/executions - фиксация работы оператора (упрощенное: количество + установка)
 router.post('/:id/executions', authenticateToken, techCardController.addExecution);
 
-// Загрузка чертежа
+// ========== ЗАГРУЗКА PDF ФАЙЛОВ ==========
+
+// POST /api/techcards/:id/upload-pdf - загрузка PDF файла с техкартой и чертежом
+router.post('/:id/upload-pdf', authenticateToken, upload.single('pdf'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'PDF файл не загружен' });
+    }
+
+    // ✅ ИСПРАВЛЕНО: Вызываем правильную функцию
+    const fileUrl = `/uploads/${req.file.filename}`;
+    const updated = await techCardController.updatePdfUrl(id, fileUrl);
+    
+    res.json({ 
+      pdfUrl: fileUrl, // ✅ Переименовано с drawingUrl
+      message: 'PDF файл успешно загружен',
+      techCard: updated
+    });
+  } catch (error) {
+    console.error('Error uploading PDF:', error);
+    res.status(500).json({ error: 'Ошибка при загрузке PDF файла' });
+  }
+});
+
+// ========== ИСТОРИЯ И АНАЛИТИКА ==========
+
+// GET /api/techcards/:id/accesses - история доступов к техкарте (кто и когда открывал)
+router.get('/:id/accesses', authenticateToken, techCardController.getTechCardAccesses);
+
+// ========== LEGACY SUPPORT (для совместимости) ==========
+
+// POST /api/techcards/:id/upload-drawing - старый роут для обратной совместимости
 router.post('/:id/upload-drawing', authenticateToken, upload.single('drawing'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -56,20 +101,19 @@ router.post('/:id/upload-drawing', authenticateToken, upload.single('drawing'), 
       return res.status(400).json({ error: 'Файл не загружен' });
     }
 
-    // Сохраняем URL в модели
     const fileUrl = `/uploads/${req.file.filename}`;
-    const updated = await techCardController.updateDrawingUrl(id, fileUrl);
+    const updated = await techCardController.updatePdfUrl(id, fileUrl);
     
     res.json({ 
-      drawingUrl: fileUrl,
-      message: 'Чертеж успешно загружен',
+      drawingUrl: fileUrl, // Возвращаем в старом формате для совместимости
+      pdfUrl: fileUrl,     // И в новом формате
+      message: 'Файл успешно загружен',
       techCard: updated
     });
   } catch (error) {
-    console.error('Error uploading drawing:', error);
-    res.status(500).json({ error: 'Ошибка при загрузке чертежа' });
+    console.error('Error uploading file:', error);
+    res.status(500).json({ error: 'Ошибка при загрузке файла' });
   }
 });
 
 module.exports = router;
-

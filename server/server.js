@@ -35,10 +35,43 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Статические файлы для загруженных файлов
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Логирование запросов
+// ✅ УЛУЧШЕННОЕ ЛОГИРОВАНИЕ ЗАПРОСОВ
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${req.method} ${req.path}`);
+  const userAgent = req.get('User-Agent') || 'Unknown';
+  const ip = req.ip || req.connection.remoteAddress || 'Unknown IP';
+  
+  console.log(`[${timestamp}] ${req.method} ${req.url}`);
+  
+  // Детальное логирование в режиме разработки
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`  📍 IP: ${ip}`);
+    console.log(`  🔑 Headers: ${JSON.stringify(req.headers, null, 2)}`);
+    
+    if (req.body && Object.keys(req.body).length > 0) {
+      // Скрываем пароли и токены в логах
+      const sanitizedBody = { ...req.body };
+      if (sanitizedBody.password) sanitizedBody.password = '[HIDDEN]';
+      if (sanitizedBody.token) sanitizedBody.token = '[HIDDEN]';
+      if (sanitizedBody.refreshToken) sanitizedBody.refreshToken = '[HIDDEN]';
+      
+      console.log(`  📦 Body: ${JSON.stringify(sanitizedBody, null, 2)}`);
+    }
+    
+    if (req.query && Object.keys(req.query).length > 0) {
+      console.log(`  🔍 Query: ${JSON.stringify(req.query, null, 2)}`);
+    }
+  }
+  
+  // Логирование времени ответа
+  const startTime = Date.now();
+  
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    const statusColor = res.statusCode >= 400 ? '🔴' : res.statusCode >= 300 ? '🟡' : '🟢';
+    console.log(`  ${statusColor} ${res.statusCode} - ${duration}ms`);
+  });
+  
   next();
 });
 
@@ -51,7 +84,9 @@ async function startServer() {
     // Синхронизация моделей в режиме разработки
     if (process.env.NODE_ENV === 'development') {
       try {
-        await db.sequelize.sync({ alter: true });
+        // ✅ Временно отключаем sync для предотвращения дублирования индексов
+        // await db.sequelize.sync({ alter: true });
+        console.log('🔄 Database sync disabled (preventing key duplication)');
         console.log('🔄 Database models synced');
       } catch (syncError) {
         console.warn('⚠️  Database sync warning:', syncError.message);
@@ -78,7 +113,7 @@ async function startServer() {
 
     // Тестовый маршрут для проверки работоспособности
     app.get('/api/health', (req, res) => {
-      res.json({ 
+      res.json({
         status: 'OK',
         database: db.sequelize.config.database,
         time: new Date().toISOString(),
@@ -106,7 +141,8 @@ async function startServer() {
 
     // Обработка 404 для API маршрутов
     app.use('/api/*', (req, res) => {
-      res.status(404).json({ 
+      console.log(`🔍 API Route not found: ${req.method} ${req.path}`);
+      res.status(404).json({
         error: 'API Route not found',
         path: req.path,
         method: req.method
@@ -115,32 +151,132 @@ async function startServer() {
 
     // Обработка всех остальных 404
     app.use((req, res) => {
+      console.log(`🔍 Route not found: ${req.method} ${req.path}`);
       res.status(404).json({ error: 'Route not found' });
     });
 
-    // Глобальная обработка ошибок
+    // ✅ УЛУЧШЕННАЯ ОБРАБОТКА ОШИБОК
     app.use((err, req, res, next) => {
-      console.error('💥 Server error:', err.stack);
+      const timestamp = new Date().toISOString();
+      const errorId = Date.now().toString(36) + Math.random().toString(36).substr(2);
       
+      console.error('\n' + '='.repeat(80));
+      console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА СЕРВЕРА');
+      console.error('='.repeat(80));
+      console.error(`⏰ Время: ${timestamp}`);
+      console.error(`🆔 ID ошибки: ${errorId}`);
+      console.error(`🌐 URL: ${req.method} ${req.url}`);
+      console.error(`📍 IP: ${req.ip || req.connection.remoteAddress || 'Unknown'}`);
+      console.error(`👤 User-Agent: ${req.get('User-Agent') || 'Unknown'}`);
+      
+      // Заголовки запроса (без авторизации)
+      const sanitizedHeaders = { ...req.headers };
+      if (sanitizedHeaders.authorization) sanitizedHeaders.authorization = '[HIDDEN]';
+      if (sanitizedHeaders.cookie) sanitizedHeaders.cookie = '[HIDDEN]';
+      console.error(`📋 Headers: ${JSON.stringify(sanitizedHeaders, null, 2)}`);
+      
+      // Тело запроса (без паролей)
+      if (req.body && Object.keys(req.body).length > 0) {
+        const sanitizedBody = { ...req.body };
+        if (sanitizedBody.password) sanitizedBody.password = '[HIDDEN]';
+        if (sanitizedBody.token) sanitizedBody.token = '[HIDDEN]';
+        console.error(`📦 Request Body: ${JSON.stringify(sanitizedBody, null, 2)}`);
+      }
+      
+      // Информация об ошибке
+      console.error(`❌ Ошибка: ${err.name || 'Unknown Error'}`);
+      console.error(`💬 Сообщение: ${err.message || 'No message'}`);
+      console.error(`📊 Код статуса: ${err.statusCode || err.status || 500}`);
+      
+      // Стек ошибки
+      if (err.stack) {
+        console.error(`📚 Stack Trace:`);
+        console.error(err.stack);
+      }
+      
+      // Дополнительная информация для специфических типов ошибок
+      if (err.code) {
+        console.error(`🔢 Error Code: ${err.code}`);
+      }
+      
+      if (err.sqlMessage) {
+        console.error(`🗄️  SQL Error: ${err.sqlMessage}`);
+      }
+      
+      if (err.sql) {
+        console.error(`📝 SQL Query: ${err.sql}`);
+      }
+      
+      console.error('='.repeat(80));
+      console.error('\n');
+
       // Специальная обработка для Multer ошибок
       if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(413).json({ 
+        return res.status(413).json({
           error: 'Файл слишком большой',
-          message: 'Максимальный размер файла: 10MB' 
+          message: 'Максимальный размер файла: 10MB',
+          errorId: errorId
         });
       }
 
       if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Неверный тип файла',
-          message: 'Проверьте формат загружаемого файла' 
+          message: 'Проверьте формат загружаемого файла',
+          errorId: errorId
+        });
+      }
+
+      // Ошибки базы данных
+      if (err.name === 'SequelizeValidationError') {
+        return res.status(400).json({
+          error: 'Ошибка валидации данных',
+          message: process.env.NODE_ENV === 'development' ? err.message : 'Неверные данные',
+          errorId: errorId
+        });
+      }
+
+      if (err.name === 'SequelizeUniqueConstraintError') {
+        return res.status(409).json({
+          error: 'Конфликт данных',
+          message: 'Запись с такими данными уже существует',
+          errorId: errorId
+        });
+      }
+
+      // JWT ошибки
+      if (err.name === 'JsonWebTokenError') {
+        return res.status(401).json({
+          error: 'Ошибка авторизации',
+          message: 'Неверный токен',
+          errorId: errorId
+        });
+      }
+
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          error: 'Токен истёк',
+          message: 'Необходимо войти в систему заново',
+          errorId: errorId
         });
       }
 
       // Общая обработка ошибок
       const statusCode = err.statusCode || err.status || 500;
-      res.status(statusCode).json({ 
-        error: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error'
+      const isProduction = process.env.NODE_ENV === 'production';
+      
+      res.status(statusCode).json({
+        error: isProduction ? 'Internal Server Error' : err.name || 'Server Error',
+        message: isProduction ? 'Что-то пошло не так. Попробуйте позже.' : err.message || 'Unknown error',
+        errorId: errorId,
+        ...(process.env.NODE_ENV === 'development' && {
+          stack: err.stack,
+          details: {
+            url: req.url,
+            method: req.method,
+            timestamp: timestamp
+          }
+        })
       });
     });
 
@@ -155,17 +291,17 @@ async function startServer() {
     // Graceful shutdown
     const gracefulShutdown = (signal) => {
       console.log(`\n🛑 ${signal} received. Starting graceful shutdown...`);
-      
+
       server.close(async () => {
         console.log('📡 HTTP server closed');
-        
+
         try {
           await db.sequelize.close();
           console.log('💾 Database connection closed');
         } catch (error) {
           console.error('❌ Error closing database:', error);
         }
-        
+
         console.log('✅ Graceful shutdown completed');
         process.exit(0);
       });
@@ -188,14 +324,30 @@ async function startServer() {
   }
 }
 
-// Обработка неперехваченных ошибок
+// ✅ УЛУЧШЕННАЯ ОБРАБОТКА НЕПЕРЕХВАЧЕННЫХ ОШИБОК
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('\n' + '!'.repeat(60));
+  console.error('🚨 UNHANDLED PROMISE REJECTION');
+  console.error('!'.repeat(60));
+  console.error('⏰ Time:', new Date().toISOString());
+  console.error('🎯 Promise:', promise);
+  console.error('❌ Reason:', reason);
+  console.error('📚 Stack:', reason?.stack || 'No stack trace');
+  console.error('!'.repeat(60));
+  console.error('\n');
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
+  console.error('\n' + '!'.repeat(60));
+  console.error('🚨 UNCAUGHT EXCEPTION');
+  console.error('!'.repeat(60));
+  console.error('⏰ Time:', new Date().toISOString());
+  console.error('❌ Error:', error.message);
+  console.error('📚 Stack:', error.stack);
+  console.error('!'.repeat(60));
+  console.error('\n');
   process.exit(1);
 });
 
 startServer();
+

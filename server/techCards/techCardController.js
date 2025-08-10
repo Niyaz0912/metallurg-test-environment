@@ -1,10 +1,25 @@
-const { TechCard, TechCardExecution, User } = require('../models');
+const { TechCard, TechCardExecution, TechCardAccess, User } = require('../models');
 
 // Проверка прав доступа
 const hasManagePermission = (userRole) => userRole === 'master' || userRole === 'admin';
 const hasViewPermission = (userRole) => ['master', 'admin', 'employee', 'director'].includes(userRole);
 
-// GET /api/techcards - список всех карт
+// Автоматическое логирование доступа к техкарте
+const logTechCardAccess = async (techCardId, userId, action = 'view') => {
+  try {
+    await TechCardAccess.create({
+      techCardId,
+      userId,
+      action,
+      accessedAt: new Date()
+    });
+  } catch (error) {
+    console.error('Error logging tech card access:', error);
+    // Не прерываем основной процесс если логирование не удалось
+  }
+};
+
+// GET /api/techcards - список всех карт (упрощенный)
 const getAllTechCards = async (req, res) => {
   try {
     if (!hasViewPermission(req.user.role)) {
@@ -18,9 +33,10 @@ const getAllTechCards = async (req, res) => {
           as: 'executions',
           include: [
             { model: User, as: 'executor', attributes: ['id', 'firstName', 'lastName'] }
-          ]
+          ],
+          required: false
         },
-        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] }
+        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'], required: false }
       ],
       order: [['createdAt', 'DESC']]
     });
@@ -32,7 +48,7 @@ const getAllTechCards = async (req, res) => {
   }
 };
 
-// GET /api/techcards/:id - конкретная карта с выполнениями
+// GET /api/techcards/:id - конкретная карта с автоматическим логированием
 const getTechCardById = async (req, res) => {
   try {
     if (!hasViewPermission(req.user.role)) {
@@ -46,18 +62,31 @@ const getTechCardById = async (req, res) => {
           model: TechCardExecution, 
           as: 'executions',
           include: [
-            { model: User, as: 'executor', attributes: ['id', 'firstName', 'lastName'] },
-            { model: User, as: 'qualityInspector', attributes: ['id', 'firstName', 'lastName'] }
+            { model: User, as: 'executor', attributes: ['id', 'firstName', 'lastName'] }
           ],
-          order: [['executedAt', 'DESC']]
+          order: [['executedAt', 'DESC']],
+          required: false
         },
-        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] }
+        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'], required: false },
+        {
+          model: TechCardAccess,
+          as: 'accesses',
+          include: [
+            { model: User, as: 'user', attributes: ['id', 'firstName', 'lastName'] }
+          ],
+          order: [['accessedAt', 'DESC']],
+          limit: 50,
+          required: false
+        }
       ]
     });
 
     if (!techCard) {
       return res.status(404).json({ error: 'Технологическая карта не найдена' });
     }
+
+    // 🎯 АВТОМАТИЧЕСКОЕ ЛОГИРОВАНИЕ ПРОСМОТРА
+    await logTechCardAccess(id, req.user.userId, 'view');
 
     res.json(techCard);
   } catch (error) {
@@ -66,7 +95,7 @@ const getTechCardById = async (req, res) => {
   }
 };
 
-// POST /api/techcards - создание новой карты
+// POST /api/techcards - создание новой карты (ОБНОВЛЕНО)
 const createTechCard = async (req, res) => {
   try {
     if (!hasManagePermission(req.user.role)) {
@@ -74,29 +103,41 @@ const createTechCard = async (req, res) => {
     }
 
     const {
+      customer,
+      order,
       productName,
       partNumber,
+      quantity,
+      pdfUrl,
       description,
-      drawingUrl,
-      specifications,
-      productionStages,
-      estimatedTimePerUnit,
+      // 🆕 Новые поля
+      priority = 'medium',
+      plannedEndDate,
       notes
     } = req.body;
 
     // Валидация обязательных полей
-    if (!productName) {
-      return res.status(400).json({ error: 'Название продукта обязательно' });
+    if (!customer || !order || !productName || !quantity) {
+      return res.status(400).json({ 
+        error: 'Заказчик, номер заказа, название продукта и количество обязательны' 
+      });
+    }
+
+    if (quantity < 1) {
+      return res.status(400).json({ error: 'Количество должно быть больше 0' });
     }
 
     const techCard = await TechCard.create({
+      customer,
+      order,
       productName,
       partNumber,
+      quantity: parseInt(quantity),
+      pdfUrl,
       description,
-      drawingUrl,
-      specifications,
-      productionStages,
-      estimatedTimePerUnit,
+      // 🆕 Новые поля
+      priority,
+      plannedEndDate: plannedEndDate || null,
       notes,
       createdById: req.user.userId,
       status: 'draft'
@@ -105,7 +146,7 @@ const createTechCard = async (req, res) => {
     // Получаем созданную карту с включенными данными
     const createdTechCard = await TechCard.findByPk(techCard.id, {
       include: [
-        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] }
+        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'], required: false }
       ]
     });
 
@@ -116,7 +157,7 @@ const createTechCard = async (req, res) => {
   }
 };
 
-// PUT /api/techcards/:id - обновление карты
+// PUT /api/techcards/:id - обновление карты (ОБНОВЛЕНО)
 const updateTechCard = async (req, res) => {
   try {
     if (!hasManagePermission(req.user.role)) {
@@ -131,33 +172,49 @@ const updateTechCard = async (req, res) => {
     }
 
     const {
+      customer,
+      order,
       productName,
       partNumber,
+      quantity,
+      pdfUrl,
       description,
-      drawingUrl,
-      specifications,
-      productionStages,
-      estimatedTimePerUnit,
-      notes,
-      status
+      status,
+      // 🆕 Новые поля
+      priority,
+      plannedEndDate,
+      actualEndDate,
+      notes
     } = req.body;
 
-    await techCard.update({
-      productName,
-      partNumber,
-      description,
-      drawingUrl,
-      specifications,
-      productionStages,
-      estimatedTimePerUnit,
-      notes,
-      status
-    });
+    // Валидация при обновлении
+    const updateData = {};
+    if (customer !== undefined) updateData.customer = customer;
+    if (order !== undefined) updateData.order = order;
+    if (productName !== undefined) updateData.productName = productName;
+    if (partNumber !== undefined) updateData.partNumber = partNumber;
+    if (quantity !== undefined) {
+      if (quantity < 1) {
+        return res.status(400).json({ error: 'Количество должно быть больше 0' });
+      }
+      updateData.quantity = parseInt(quantity);
+    }
+    if (pdfUrl !== undefined) updateData.pdfUrl = pdfUrl;
+    if (description !== undefined) updateData.description = description;
+    if (status !== undefined) updateData.status = status;
+
+    // 🆕 Обработка новых полей
+    if (priority !== undefined) updateData.priority = priority;
+    if (plannedEndDate !== undefined) updateData.plannedEndDate = plannedEndDate || null;
+    if (actualEndDate !== undefined) updateData.actualEndDate = actualEndDate || null;
+    if (notes !== undefined) updateData.notes = notes;
+
+    await techCard.update(updateData);
 
     // Получаем обновленную карту
     const updatedTechCard = await TechCard.findByPk(id, {
       include: [
-        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] }
+        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'], required: false }
       ]
     });
 
@@ -205,7 +262,7 @@ const deleteTechCard = async (req, res) => {
   }
 };
 
-// POST /api/techcards/:id/executions - добавить выполнение
+// POST /api/techcards/:id/executions - добавить выполнение (УПРОЩЕННОЕ)
 const addExecution = async (req, res) => {
   try {
     if (!hasViewPermission(req.user.role)) {
@@ -214,11 +271,8 @@ const addExecution = async (req, res) => {
 
     const { id } = req.params;
     const {
-      stageName,
       quantityProduced,
-      qualityStatus,
-      qualityComment,
-      checkedById
+      setupNumber
     } = req.body;
 
     // Проверяем существование техкарты
@@ -227,32 +281,31 @@ const addExecution = async (req, res) => {
       return res.status(404).json({ error: 'Технологическая карта не найдена' });
     }
 
-    // Валидация
-    if (!stageName || !quantityProduced) {
+    // Упрощенная валидация
+    if (!quantityProduced || quantityProduced < 1) {
       return res.status(400).json({ 
-        error: 'Название этапа и количество обязательны' 
+        error: 'Количество произведенных деталей обязательно и должно быть больше 0' 
       });
     }
 
     const execution = await TechCardExecution.create({
       techCardId: id,
       executedById: req.user.userId,
-      stageName,
       quantityProduced: parseInt(quantityProduced),
-      qualityStatus,
-      qualityComment,
-      checkedById,
+      setupNumber: setupNumber ? parseInt(setupNumber) : 1,
       executedAt: new Date()
     });
 
     // Обновляем статистику в техкарте
     await techCard.increment('totalProducedQuantity', { by: parseInt(quantityProduced) });
 
-    // Получаем созданное выполнение с данными пользователей
+    // 🎯 ЛОГИРУЕМ КАК РАБОТУ (не просто просмотр)
+    await logTechCardAccess(id, req.user.userId, 'work');
+
+    // Получаем созданное выполнение с данными пользователя
     const createdExecution = await TechCardExecution.findByPk(execution.id, {
       include: [
-        { model: User, as: 'executor', attributes: ['id', 'firstName', 'lastName'] },
-        { model: User, as: 'qualityInspector', attributes: ['id', 'firstName', 'lastName'] }
+        { model: User, as: 'executor', attributes: ['id', 'firstName', 'lastName'] }
       ]
     });
 
@@ -263,8 +316,8 @@ const addExecution = async (req, res) => {
   }
 };
 
-// Обновление URL чертежа
-const updateDrawingUrl = async (id, drawingUrl) => {
+// 🆕 Обновление URL PDF файла с размером (ОБНОВЛЕНО)
+const updatePdfUrl = async (id, pdfUrl, pdfFileSize = null) => {
   try {
     const techCard = await TechCard.findByPk(id);
     
@@ -272,19 +325,48 @@ const updateDrawingUrl = async (id, drawingUrl) => {
       throw new Error('Технологическая карта не найдена');
     }
 
-    await techCard.update({ drawingUrl });
+    const updateData = { pdfUrl };
+    if (pdfFileSize !== null) {
+      updateData.pdfFileSize = pdfFileSize;
+    }
+
+    await techCard.update(updateData);
     
     // Возвращаем обновленную техкарту с связанными данными
     const updatedTechCard = await TechCard.findByPk(id, {
       include: [
-        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'] }
+        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'], required: false }
       ]
     });
 
     return updatedTechCard;
   } catch (error) {
-    console.error('Error updating drawing URL:', error);
+    console.error('Error updating PDF URL:', error);
     throw error;
+  }
+};
+
+// GET /api/techcards/:id/accesses - получить историю доступов к техкарте
+const getTechCardAccesses = async (req, res) => {
+  try {
+    if (!hasManagePermission(req.user.role)) {
+      return res.status(403).json({ error: 'Доступ запрещён' });
+    }
+
+    const { id } = req.params;
+    const accesses = await TechCardAccess.findAll({
+      where: { techCardId: id },
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'firstName', 'lastName'] }
+      ],
+      order: [['accessedAt', 'DESC']],
+      limit: 100
+    });
+
+    res.json(accesses);
+  } catch (error) {
+    console.error('Get tech card accesses error:', error);
+    res.status(500).json({ error: 'Ошибка при получении истории доступов' });
   }
 };
 
@@ -295,6 +377,8 @@ module.exports = {
   updateTechCard,
   deleteTechCard,
   addExecution,
-  updateDrawingUrl
+  updatePdfUrl,
+  getTechCardAccesses,
+  logTechCardAccess
 };
 
