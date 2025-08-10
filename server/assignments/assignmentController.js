@@ -54,10 +54,18 @@ exports.getAssignments = async (req, res) => {
       where: whereCondition,
       include: [
         ...includeOperator,
-        { model: db.TechCard, as: 'techCard', attributes: ['id', 'productName', 'description'] }
+        { model: db.TechCard, as: 'techCard', attributes: ['id', 'productName'] } // ✅ Убрано 'description'
       ],
       order: [['createdAt', 'DESC']]
     });
+
+    // ✅ Обработка пустого результата
+    if (!assignments || assignments.length === 0) {
+      return res.json({
+        message: 'У вас пока нет назначенных заданий',
+        assignments: []
+      });
+    }
 
     res.json(assignments);
   } catch (e) {
@@ -65,6 +73,7 @@ exports.getAssignments = async (req, res) => {
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
+
 
 // Создать задание
 exports.createAssignment = async (req, res) => {

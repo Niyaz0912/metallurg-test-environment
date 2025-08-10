@@ -155,44 +155,49 @@ exports.login = async (req, res) => {
   }
 };
 
-// Получить информацию о текущем пользователе
+// ✅ ИСПРАВЛЕННЫЙ МЕТОД: Получить информацию о текущем пользователе
 exports.getMe = async (req, res) => {
   try {
-    const user = await db.User.findByPk(req.user.userId, {
-      attributes: ['id', 'firstName', 'lastName', 'role', 'position', 'departmentId'],
-      include: [{
-        model: db.Department,
-        as: 'department', // Должно совпадать с ассоциацией в модели
-        attributes: ['id', 'name'],
-        required: false // LEFT JOIN вместо INNER JOIN
-      }]
+    const userId = req.user.userId;
+    
+    const user = await db.User.findByPk(userId, {
+      include: [
+        {
+          model: db.Department,
+          as: 'department',
+          attributes: ['id', 'name'],
+          required: false
+        }
+      ],
+      attributes: ['id', 'firstName', 'lastName', 'role', 'position', 'departmentId'] // ✅ ДОБАВЛЕН departmentId
     });
 
     if (!user) {
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
 
-    // Проверка данных
+    // Проверка данных для отладки
     console.log('Department data:', {
       dbDepartmentId: user.departmentId,
       includedDepartment: user.department
     });
 
-    // Формируем гарантированно правильную структуру ответа
-    const response = {
-      user: {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        position: user.position,
-        department: user.department 
-          ? { id: user.department.id, name: user.department.name }
-          : null
-      }
+    // ✅ ИСПРАВЛЕННАЯ СТРУКТУРА ОТВЕТА с departmentId
+    const userData = {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      position: user.position,
+      departmentId: user.departmentId, // ✅ ВКЛЮЧИТЬ departmentId в ответ
+      department: user.department 
+        ? { id: user.department.id, name: user.department.name }
+        : null
     };
 
-    res.json(response);
+    console.log('👤 Отправляем данные пользователя:', userData); // Для отладки
+
+    res.json({ user: userData });
   } catch (error) {
     console.error('GetMe error:', error);
     res.status(500).json({ message: 'Ошибка сервера' });
@@ -319,6 +324,3 @@ exports.updateUserRole = async (req, res) => {
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
-
-
-
