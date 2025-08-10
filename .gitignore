@@ -17,6 +17,9 @@ lerna-debug.log*
 .env
 .env.local
 .env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Editor/OS
 .vscode/
@@ -28,4 +31,85 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# 🆕 Загруженные файлы пользователей (PDF техкарты)
+server/uploads/*.pdf
+server/uploads/*.doc
+server/uploads/*.docx
+server/uploads/*.jpg
+server/uploads/*.png
+server/uploads/*.jpeg
+server/uploads/*.gif
+
+# Но сохраняем структуру директории uploads
+!server/uploads/.gitkeep
+!server/uploads/README.md
+
+# 🆕 База данных (локальные файлы)
+*.sqlite
+*.sqlite3
+*.db
+database.db
+
+# 🆕 Временные файлы системы
+*.tmp
+*.temp
+.cache/
+.temp/
+
+# 🆕 Резервные копии
+*.bak
+*.backup
+*~
+
+# 🆕 Производственные сборки
+/build
+/public/build
+frontend/dist/
+frontend/build/
+
+# 🆕 Конфигурационные файлы с секретами
+config/database.json
+config/production.json
+.sequelizerc.local
+
+# 🆕 Сессии и кэш
+sessions/
+.sessions
+redis-dump.rdb
+
+# 🆕 Системные файлы Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# 🆕 Системные файлы macOS
+.AppleDouble
+.LSOverride
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# 🆕 Файлы разработки
+*.orig
+*.rej
+.nyc_output
+coverage/
+.coverage
+
+# 🆕 Пакетные менеджеры
+package-lock.json.backup
+yarn.lock.backup
+.pnpm-store/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
 
