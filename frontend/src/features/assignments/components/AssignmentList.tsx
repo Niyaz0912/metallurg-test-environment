@@ -1,6 +1,6 @@
 // frontend/src/features/assignments/components/AssignmentList.tsx
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom'; // ✅ ДОБАВЛЕН ИМПОРТ
+import { Link } from 'react-router-dom';
 import { fetchAssignments, updateAssignment, deleteAssignment, Assignment } from '../../../shared/api/assignmentsApi';
 import { useAuth } from '../../auth/hooks/useAuth';
 
@@ -9,7 +9,8 @@ interface AssignmentListProps {
 }
 
 const AssignmentList: React.FC<AssignmentListProps> = ({ userRole }) => {
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  // ✅ УЛУЧШЕННАЯ ИНИЦИАЛИЗАЦИЯ СОСТОЯНИЙ
+  const [assignments, setAssignments] = useState<Assignment[]>([]); // Инициализируем как пустой массив
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
@@ -22,20 +23,51 @@ const AssignmentList: React.FC<AssignmentListProps> = ({ userRole }) => {
     loadAssignments();
   }, []);
 
-  const loadAssignments = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await fetchAssignments();
-      setAssignments(response.data || []);
-    } catch (err) {
-      console.error('Ошибка загрузки заданий:', err);
-      setError('Ошибка при загрузке заданий');
-    } finally {
-      setLoading(false);
+  // ✅ УЛУЧШЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ С ОБРАБОТКОЙ РАЗЛИЧНЫХ ФОРМАТОВ ОТВЕТА
+  // ✅ ИСПРАВЛЕННАЯ ФУНКЦИЯ loadAssignments
+const loadAssignments = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+    
+    const response = await fetchAssignments();
+    console.log('📦 Ответ от API fetchAssignments:', response);
+    
+    // ✅ ИСПРАВЛЕНО: обращение к response.data вместо response.assignments
+    if (response && typeof response === 'object') {
+      // Если API возвращает объект с полем data (текущий формат)
+      if (response.data && Array.isArray(response.data)) {
+        setAssignments(response.data);
+        console.log('✅ Загружено заданий из response.data:', response.data.length);
+      }
+      // ❌ УДАЛЕНО: блок с response.assignments
+      // else if (response.assignments && Array.isArray(response.assignments)) {
+      //   setAssignments(response.assignments);
+      //   console.log('✅ Загружено заданий из response.assignments:', response.assignments.length);
+      // }
+      // Если API возвращает массив напрямую  
+      else if (Array.isArray(response)) {
+        setAssignments(response);
+        console.log('✅ Загружено заданий из response:', response.length);
+      }
+      // Если ни то, ни другое - устанавливаем пустой массив
+      else {
+        console.warn('⚠️ API вернул неожиданный формат:', response);
+        setAssignments([]);
+      }
+    } else {
+      console.warn('⚠️ API вернул пустой или некорректный ответ');
+      setAssignments([]);
     }
-  };
+  } catch (err) {
+    console.error('❌ Ошибка загрузки заданий:', err);
+    setError('Не удалось загрузить задания. Проверьте подключение к серверу.');
+    setAssignments([]); // ✅ Устанавливаем пустой массив при ошибке
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleStatusUpdate = async (id: number, newStatus: 'assigned' | 'completed') => {
     if (updatingIds.has(id)) return;
@@ -122,9 +154,11 @@ const AssignmentList: React.FC<AssignmentListProps> = ({ userRole }) => {
     return shiftType === 'day' ? 'Дневная' : 'Ночная';
   };
 
+  // ✅ ЗАЩИЩЕННЫЙ РЕНДЕРИНГ С ДОПОЛНИТЕЛЬНЫМИ ПРОВЕРКАМИ
   if (loading) {
     return (
       <div className="flex justify-center items-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mr-3"></div>
         <div className="text-lg">Загрузка заданий...</div>
       </div>
     );
@@ -133,12 +167,28 @@ const AssignmentList: React.FC<AssignmentListProps> = ({ userRole }) => {
   if (error) {
     return (
       <div className="text-center p-8">
-        <div className="text-red-600 mb-4">{error}</div>
+        <div className="text-red-600 mb-4">❌ {error}</div>
+        <button 
+          onClick={loadAssignments}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+        >
+          🔄 Попробовать снова
+        </button>
+      </div>
+    );
+  }
+
+  // ✅ ДОПОЛНИТЕЛЬНАЯ ЗАЩИТНАЯ ПРОВЕРКА ПЕРЕД map()
+  if (!Array.isArray(assignments)) {
+    console.error('❌ assignments не является массивом:', assignments);
+    return (
+      <div className="text-center p-8">
+        <div className="text-red-600 mb-4">Ошибка отображения заданий</div>
         <button 
           onClick={loadAssignments}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
-          Попробовать снова
+          🔄 Перезагрузить
         </button>
       </div>
     );
@@ -147,21 +197,34 @@ const AssignmentList: React.FC<AssignmentListProps> = ({ userRole }) => {
   if (assignments.length === 0) {
     return (
       <div className="text-center p-8 text-gray-500">
-        <div className="text-xl mb-2">📋</div>
-        <div>Задания не найдены</div>
+        <div className="text-6xl mb-4">📋</div>
+        <div className="text-xl mb-2">Задания не найдены</div>
         <p className="text-sm mt-2">
           {canManageAllAssignments 
             ? 'Создайте первое задание, нажав кнопку выше'
             : 'У вас пока нет назначенных заданий'}
         </p>
+        <button 
+          onClick={loadAssignments}
+          className="mt-4 text-blue-600 hover:text-blue-800 text-sm"
+        >
+          🔄 Обновить список
+        </button>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-gray-600 mb-4">
-        Найдено заданий: <span className="font-semibold">{assignments.length}</span>
+      <div className="text-sm text-gray-600 mb-4 flex justify-between items-center">
+        <span>Найдено заданий: <span className="font-semibold">{assignments.length}</span></span>
+        <button 
+          onClick={loadAssignments}
+          className="text-blue-600 hover:text-blue-800 text-xs"
+          disabled={loading}
+        >
+          🔄 Обновить
+        </button>
       </div>
 
       {/* Десктопная версия - таблица */}
@@ -210,7 +273,7 @@ const AssignmentList: React.FC<AssignmentListProps> = ({ userRole }) => {
                         Заказчик: {assignment.customerName}
                       </div>
                     )}
-                    {/* ✅ НОВОЕ: Ссылка на технологическую карту */}
+                    {/* ✅ Ссылка на технологическую карту */}
                     {assignment.techCardId && (
                       <div className="mt-2">
                         <Link 
@@ -287,7 +350,7 @@ const AssignmentList: React.FC<AssignmentListProps> = ({ userRole }) => {
                           disabled={updatingIds.has(assignment.id)}
                           className="text-green-600 hover:text-green-900 disabled:opacity-50"
                         >
-                          {updatingIds.has(assignment.id) ? '...' : 'Выполнить'}
+                          {updatingIds.has(assignment.id) ? '⏳' : '✅ Выполнить'}
                         </button>
                       )}
                       
@@ -296,7 +359,7 @@ const AssignmentList: React.FC<AssignmentListProps> = ({ userRole }) => {
                           onClick={() => handleDelete(assignment.id)}
                           className="text-red-600 hover:text-red-900"
                         >
-                          Удалить
+                          🗑️ Удалить
                         </button>
                       )}
                     </div>
@@ -346,7 +409,7 @@ const AssignmentList: React.FC<AssignmentListProps> = ({ userRole }) => {
               </div>
             )}
             
-            {/* ✅ НОВОЕ: Ссылка на технологическую карту в мобильной версии */}
+            {/* ✅ Ссылка на технологическую карту в мобильной версии */}
             {assignment.techCardId && (
               <div className="mb-3">
                 <Link 
@@ -365,7 +428,7 @@ const AssignmentList: React.FC<AssignmentListProps> = ({ userRole }) => {
                   disabled={updatingIds.has(assignment.id)}
                   className="flex-1 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 disabled:opacity-50"
                 >
-                  {updatingIds.has(assignment.id) ? 'Обновление...' : 'Отметить выполненным'}
+                  {updatingIds.has(assignment.id) ? '⏳ Обновление...' : '✅ Отметить выполненным'}
                 </button>
               </div>
             )}
@@ -377,3 +440,4 @@ const AssignmentList: React.FC<AssignmentListProps> = ({ userRole }) => {
 };
 
 export default AssignmentList;
+
