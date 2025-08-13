@@ -32,8 +32,15 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Статические файлы для загруженных файлов
+// ✅ ИСПРАВЛЕНИЕ: Статические файлы для загруженных файлов
+// Основной роут для прямого доступа к файлам
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ✅ ДОБАВЛЕН: Роут для API доступа к файлам (для фронтенда)
+app.use('/api/files/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ✅ ДОБАВЛЕН: Альтернативный роут для всех файлов через API
+app.use('/api/files', express.static(path.join(__dirname, 'uploads')));
 
 // ✅ УЛУЧШЕННОЕ ЛОГИРОВАНИЕ ЗАПРОСОВ
 app.use((req, res, next) => {
@@ -122,6 +129,32 @@ async function startServer() {
       });
     });
 
+    // ✅ ДОБАВЛЕН: Тестовый маршрут для проверки доступа к файлам
+    app.get('/api/files/test', (req, res) => {
+      const uploadsPath = path.join(__dirname, 'uploads');
+      
+      try {
+        const files = fs.readdirSync(uploadsPath);
+        res.json({
+          message: 'Files API working',
+          uploadsPath: uploadsPath,
+          filesCount: files.length,
+          files: files.slice(0, 10), // Показываем первые 10 файлов
+          availableRoutes: [
+            '/uploads/* - Direct file access',
+            '/api/files/uploads/* - API file access',
+            '/api/files/* - Alternative API file access'
+          ]
+        });
+      } catch (error) {
+        res.status(500).json({
+          error: 'Cannot read uploads directory',
+          path: uploadsPath,
+          message: error.message
+        });
+      }
+    });
+
     // Маршрут для получения информации об API
     app.get('/api', (req, res) => {
       res.json({
@@ -129,6 +162,7 @@ async function startServer() {
         version: '1.0.0',
         endpoints: [
           '/api/health - Server health check',
+          '/api/files/test - Files API test', // ✅ ДОБАВЛЕН
           '/api/departments - Department management',
           '/api/users - User management and authentication',
           '/api/assignments - Shift assignments management',
@@ -145,14 +179,26 @@ async function startServer() {
       res.status(404).json({
         error: 'API Route not found',
         path: req.path,
-        method: req.method
+        method: req.method,
+        // ✅ ДОБАВЛЕНО: Подсказки для файлов
+        ...(req.path.includes('/files/') && {
+          hint: 'Try these file routes:',
+          alternatives: [
+            `/uploads${req.path.replace('/api/files/uploads', '')}`,
+            `/api/files${req.path.replace('/api/files/uploads', '')}`
+          ]
+        })
       });
     });
 
     // Обработка всех остальных 404
     app.use((req, res) => {
       console.log(`🔍 Route not found: ${req.method} ${req.path}`);
-      res.status(404).json({ error: 'Route not found' });
+      res.status(404).json({ 
+        error: 'Route not found',
+        path: req.path,
+        method: req.method
+      });
     });
 
     // ✅ УЛУЧШЕННАЯ ОБРАБОТКА ОШИБОК
@@ -286,6 +332,13 @@ async function startServer() {
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`💾 Database: ${db.sequelize.config.database}`);
       console.log(`📁 Uploads directory: ${uploadsDir}`);
+      
+      // ✅ ДОБАВЛЕНО: Информация о файловых роутах
+      console.log(`📄 File routes:`);
+      console.log(`   Direct: http://localhost:${PORT}/uploads/filename.pdf`);
+      console.log(`   API: http://localhost:${PORT}/api/files/uploads/filename.pdf`);
+      console.log(`   Alt: http://localhost:${PORT}/api/files/filename.pdf`);
+      console.log(`   Test: http://localhost:${PORT}/api/files/test`);
     });
 
     // Graceful shutdown

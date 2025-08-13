@@ -7,11 +7,11 @@ import {
   type TechCard,
   type CreateExecutionData,
   getTechCardProgress,
-  // 🆕 Новые импорты
   getPriorityColor,
   isTechCardOverdue,
   getDaysToDeadline,
-  formatFileSize
+  formatFileSize,
+  getFileUrl // ← Импорт новой функции
 } from '../../../shared/api/techCardsApi';
 
 interface TechCardViewerProps {
@@ -103,7 +103,6 @@ const TechCardViewer: React.FC<TechCardViewerProps> = ({
     }
   };
 
-  // 🆕 Функции для работы с приоритетом и датами
   const getPriorityText = (priority: string) => {
     const priorities = {
       low: '🟢 Низкий',
@@ -122,14 +121,13 @@ const TechCardViewer: React.FC<TechCardViewerProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-        {/* 🆕 Обновленный заголовок с приоритетом */}
+        {/* Заголовок */}
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-3">
             <h2 className="text-2xl font-bold text-gray-900">{detailedCard.productName}</h2>
             <span className={`px-3 py-1 text-sm font-medium rounded-full border ${getStatusColor(detailedCard.status)}`}>
               {getStatusText(detailedCard.status)}
             </span>
-            {/* 🆕 Приоритет */}
             <span 
               className="px-2 py-1 text-xs font-medium rounded"
               style={{ 
@@ -145,7 +143,6 @@ const TechCardViewer: React.FC<TechCardViewerProps> = ({
                 🏷️ {detailedCard.partNumber}
               </span>
             )}
-            {/* 🆕 Индикатор просрочки */}
             {isOverdue && (
               <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded font-medium">
                 ⚠️ Просрочено
@@ -206,7 +203,6 @@ const TechCardViewer: React.FC<TechCardViewerProps> = ({
                       </div>
                     </div>
 
-                    {/* 🆕 Блок планирования */}
                     {(detailedCard.plannedEndDate || detailedCard.actualEndDate) && (
                       <div className="pt-2 border-t border-indigo-100">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -240,7 +236,6 @@ const TechCardViewer: React.FC<TechCardViewerProps> = ({
                       </div>
                     )}
 
-                    {/* 🆕 Заметки */}
                     {detailedCard.notes && (
                       <div className="pt-2 border-t border-indigo-100">
                         <label className="text-sm font-medium text-indigo-600">📝 Заметки:</label>
@@ -313,21 +308,29 @@ const TechCardViewer: React.FC<TechCardViewerProps> = ({
                     <div className="text-center">
                       <div className="text-6xl mb-4">📄</div>
                       <p className="text-gray-700 mb-2">PDF файл с техкартой и чертежом</p>
-                      {/* 🆕 Размер файла */}
                       {detailedCard.pdfFileSize && (
                         <p className="text-sm text-gray-500 mb-4">{formatFileSize(detailedCard.pdfFileSize)}</p>
                       )}
-                      <a 
-                        href={detailedCard.pdfUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
+                      
+                      {/* ✅ ОБНОВЛЕННАЯ КНОПКА С ЦЕНТРАЛИЗОВАННОЙ ФУНКЦИЕЙ */}
+                      <button
+                        onClick={() => {
+                          if (!detailedCard.pdfUrl) {
+                            console.error('PDF URL is not available');
+                            return;
+                          }
+                          
+                          const pdfUrl = getFileUrl(detailedCard.pdfUrl);
+                          console.log('Opening PDF:', pdfUrl);
+                          window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+                        }}
                         className="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
                       >
                         <span>📖 Открыть PDF файл</span>
                         <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
-                      </a>
+                      </button>
                       <p className="text-xs text-gray-500 mt-2">Откроется в новой вкладке</p>
                     </div>
                   </div>
@@ -497,3 +500,4 @@ const TechCardViewer: React.FC<TechCardViewerProps> = ({
 };
 
 export default TechCardViewer;
+

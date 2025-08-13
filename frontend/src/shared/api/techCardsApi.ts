@@ -1,4 +1,3 @@
-// frontend/src/shared/api/techCardsApi.ts
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 // ========== ОБНОВЛЕННЫЕ УПРОЩЕННЫЕ ТИПЫ ДАННЫХ ==========
@@ -114,6 +113,25 @@ interface TechCardFilters {
   dateFrom?: string;
   dateTo?: string;
 }
+
+// 🆕 ЦЕНТРАЛИЗОВАННАЯ ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ URL ФАЙЛОВ
+export const getFileUrl = (relativePath: string): string => {
+  if (relativePath.startsWith('http')) {
+    return relativePath;
+  }
+  
+  // Используем переменную окружения для API базы
+  const API_BASE = import.meta.env.VITE_API_URL || '/api';
+  
+  // Если API_BASE содержит полный URL (например, http://localhost:3000/api)
+  if (API_BASE.startsWith('http')) {
+    const baseUrl = API_BASE.replace('/api', '');
+    return `${baseUrl}/api/files${relativePath}`;
+  }
+  
+  // Если относительный путь, используем текущий origin
+  return `${window.location.origin}/api/files${relativePath}`;
+};
 
 // Вспомогательная функция для получения токена
 const getAuthHeaders = () => {
@@ -448,4 +466,5 @@ export type {
   UpdateTechCardData,
   TechCardFilters,
 };
+;
 
