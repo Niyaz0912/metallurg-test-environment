@@ -4,7 +4,8 @@ import { useAuth } from '../auth/hooks/useAuth';
 import UserList from './components/UserList';
 import UserCreateForm from './components/UserCreateForm';
 import ProductionPlansManager from './components/ProductionPlansManager';
-import TechCardsManager from './components/TechCardsManager';
+// ✅ Правильный импорт из техкарт
+import TechCardsManager from '../techCard/components/TechCardsManager';
 
 interface User {
   id: number;
@@ -133,7 +134,7 @@ const AdminPanel: React.FC = () => {
           </button>
         </div>
 
-        {/* Условный рендеринг секций */}
+        {/* Содержимое секций */}
         {activeSection === 'users' && (
           <div>
             <div className="flex justify-between items-center mb-4">

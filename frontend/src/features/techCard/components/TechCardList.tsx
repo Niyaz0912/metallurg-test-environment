@@ -1,212 +1,166 @@
 // frontend/src/features/techCard/components/TechCardList.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   type TechCard,
   getTechCardProgress,
-  // 🆕 Новые импорты
-  type TechCardPriority,
-  isTechCardOverdue
-} from '../../../shared/api/techCardsApi';
-import TechCardCard from './TechCardCard';
+  isTechCardOverdue,
+  getDaysToDeadline,
+  getPriorityColor
+} from "../../../shared/api/techCardsApi";
 
 interface TechCardListProps {
   techCards: TechCard[];
-  onView: (techCard: TechCard) => void;
-  onEdit?: (techCard: TechCard) => void;
-  onDelete?: (techCard: TechCard) => void;
-  onStatusChange?: (techCard: TechCard, status: 'draft' | 'active' | 'archived') => void;
-  compact?: boolean;
+  onCardClick?: (card: TechCard) => void;
+  onCardEdit?: (card: TechCard) => void;
 }
 
-const TechCardList: React.FC<TechCardListProps> = ({
-  techCards,
-  onView,
-  onEdit,
-  onDelete,
-  onStatusChange,
-  compact = false
+const TechCardList: React.FC<TechCardListProps> = ({ 
+  techCards, 
+  onCardClick,
+  onCardEdit 
 }) => {
-  const [sortBy, setSortBy] = useState<'name' | 'customer' | 'order' | 'progress' | 'date' | 'priority'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  // 🆕 Фильтр по приоритету
-  const [priorityFilter, setPriorityFilter] = useState<TechCardPriority | 'all'>('all');
-
-  // 🆕 Фильтрация по приоритету
-  const filteredTechCards = techCards.filter(card => 
-    priorityFilter === 'all' || card.priority === priorityFilter
-  );
-
-  // Сортировка техкарт
-  const sortedTechCards = [...filteredTechCards].sort((a, b) => {
-    let comparison = 0;
-
-    switch (sortBy) {
-      case 'name':
-        comparison = a.productName.localeCompare(b.productName);
-        break;
-      case 'customer':
-        comparison = a.customer.localeCompare(b.customer);
-        break;
-      case 'order':
-        comparison = a.order.localeCompare(b.order);
-        break;
-      case 'progress':
-        const progressA = getTechCardProgress(a);
-        const progressB = getTechCardProgress(b);
-        comparison = progressA - progressB;
-        break;
-      case 'date':
-        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        break;
-      // 🆕 Сортировка по приоритету
-      case 'priority':
-        const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-        comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
-        break;
-      default:
-        comparison = 0;
-    }
-
-    return sortOrder === 'asc' ? comparison : -comparison;
-  });
-
-  const handleSortChange = (newSortBy: typeof sortBy) => {
-    if (sortBy === newSortBy) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(newSortBy);
-      setSortOrder('asc');
-    }
+  const getPriorityText = (priority: string) => {
+    const priorities = {
+      low: '🟢 Низкий',
+      medium: '🟡 Средний',
+      high: '🟠 Высокий',
+      urgent: '🔴 Срочный'
+    };
+    return priorities[priority as keyof typeof priorities] || priority;
   };
 
-  const getSortIcon = (field: typeof sortBy) => {
-    if (sortBy !== field) return '↕️';
-    return sortOrder === 'asc' ? '↑' : '↓';
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'draft': return '📝 Черновик';
+      case 'active': return '✅ Активная';
+      case 'archived': return '📁 Архив';
+      default: return status;
+    }
   };
 
   if (techCards.length === 0) {
     return (
       <div className="text-center py-12">
         <div className="text-gray-400 text-6xl mb-4">📄</div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Нет техкарт</h3>
-        <p className="text-gray-500">Техкарты появятся после создания</p>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Техкарты не найдены</h3>
+        <p className="text-gray-500">Пока нет созданных техкарт</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* 🆕 Панель фильтрации и сортировки */}
-      <div className="flex flex-wrap items-center gap-2 p-4 bg-gray-50 rounded-lg">
-        {/* Фильтр по приоритету */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Приоритет:</span>
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value as TechCardPriority | 'all')}
-            className="px-2 py-1 text-sm border border-gray-300 rounded"
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {techCards.map((card) => {
+        const progress = getTechCardProgress(card);
+        const isOverdue = isTechCardOverdue(card);
+        const daysToDeadline = getDaysToDeadline(card);
+
+        return (
+          <div
+            key={card.id}
+            className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => onCardClick?.(card)}
           >
-            <option value="all">Все</option>
-            <option value="urgent">🔴 Срочный</option>
-            <option value="high">🟠 Высокий</option>
-            <option value="medium">🟡 Средний</option>
-            <option value="low">🟢 Низкий</option>
-          </select>
-        </div>
+            {/* Заголовок карточки */}
+            <div className="p-4 border-b">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+                  {card.productName}
+                </h3>
+                <span 
+                  className="px-2 py-1 text-xs font-medium rounded-full ml-2"
+                  style={{ 
+                    backgroundColor: `${getPriorityColor(card.priority)}20`,
+                    color: getPriorityColor(card.priority)
+                  }}
+                >
+                  {getPriorityText(card.priority)}
+                </span>
+              </div>
+              
+              {card.partNumber && (
+                <div className="text-sm text-gray-500 mb-2">
+                  🏷️ {card.partNumber}
+                </div>
+              )}
 
-        <div className="border-l border-gray-300 h-6 mx-2"></div>
+              <div className="text-sm text-gray-600">
+                <div><strong>Заказчик:</strong> {card.customer}</div>
+                <div><strong>Заказ:</strong> {card.order}</div>
+              </div>
+            </div>
 
-        <span className="text-sm font-medium text-gray-700">Сортировать:</span>
-        
-        <button
-          onClick={() => handleSortChange('date')}
-          className={`px-3 py-1 text-sm rounded transition-colors ${
-            sortBy === 'date'
-              ? 'bg-indigo-100 text-indigo-700 font-medium'
-              : 'bg-white text-gray-600 hover:bg-gray-100'
-          }`}
-        >
-          Дате {getSortIcon('date')}
-        </button>
+            {/* Прогресс */}
+            <div className="p-4 border-b">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700">Прогресс</span>
+                <span className="text-sm text-gray-900">
+                  {card.totalProducedQuantity} / {card.quantity} ({progress}%)
+                </span>
+              </div>
+              
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full transition-all ${
+                    progress >= 100 ? 'bg-green-500' :
+                    progress >= 75 ? 'bg-blue-500' :
+                    progress >= 50 ? 'bg-yellow-500' :
+                    progress >= 25 ? 'bg-orange-500' : 'bg-red-500'
+                  }`}
+                  style={{ width: `${Math.min(progress, 100)}%` }}
+                />
+              </div>
+            </div>
 
-        {/* 🆕 Сортировка по приоритету */}
-        <button
-          onClick={() => handleSortChange('priority')}
-          className={`px-3 py-1 text-sm rounded transition-colors ${
-            sortBy === 'priority'
-              ? 'bg-indigo-100 text-indigo-700 font-medium'
-              : 'bg-white text-gray-600 hover:bg-gray-100'
-          }`}
-        >
-          Приоритету {getSortIcon('priority')}
-        </button>
+            {/* Статус и даты */}
+            <div className="p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-800">
+                  {getStatusText(card.status)}
+                </span>
+                
+                {card.pdfUrl && (
+                  <span className="text-xs text-purple-600">
+                    📄 PDF
+                  </span>
+                )}
+              </div>
 
-        <button
-          onClick={() => handleSortChange('name')}
-          className={`px-3 py-1 text-sm rounded transition-colors ${
-            sortBy === 'name'
-              ? 'bg-indigo-100 text-indigo-700 font-medium'
-              : 'bg-white text-gray-600 hover:bg-gray-100'
-          }`}
-        >
-          Названию {getSortIcon('name')}
-        </button>
+              {card.plannedEndDate && (
+                <div className="text-xs text-gray-500 mt-2">
+                  📅 План: {new Date(card.plannedEndDate).toLocaleDateString('ru-RU')}
+                  {daysToDeadline !== null && !card.actualEndDate && (
+                    <div className={`mt-1 ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
+                      {daysToDeadline < 0 ? 
+                        `⚠️ Просрочено на ${Math.abs(daysToDeadline)} дн.` : 
+                        `⏰ Осталось ${daysToDeadline} дн.`
+                      }
+                    </div>
+                  )}
+                </div>
+              )}
 
-        <button
-          onClick={() => handleSortChange('customer')}
-          className={`px-3 py-1 text-sm rounded transition-colors ${
-            sortBy === 'customer'
-              ? 'bg-indigo-100 text-indigo-700 font-medium'
-              : 'bg-white text-gray-600 hover:bg-gray-100'
-          }`}
-        >
-          Заказчику {getSortIcon('customer')}
-        </button>
-
-        <button
-          onClick={() => handleSortChange('progress')}
-          className={`px-3 py-1 text-sm rounded transition-colors ${
-            sortBy === 'progress'
-              ? 'bg-indigo-100 text-indigo-700 font-medium'
-              : 'bg-white text-gray-600 hover:bg-gray-100'
-          }`}
-        >
-          Прогрессу {getSortIcon('progress')}
-        </button>
-
-        {/* 🆕 Счетчики */}
-        <div className="ml-auto flex items-center gap-4 text-sm text-gray-500">
-          <span>Показано: {filteredTechCards.length}</span>
-          <span>Всего: {techCards.length}</span>
-          {/* Просроченные */}
-          {techCards.filter(isTechCardOverdue).length > 0 && (
-            <span className="text-red-600 font-medium">
-              ⚠️ Просрочено: {techCards.filter(isTechCardOverdue).length}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Список карточек */}
-      <div className={`grid gap-4 ${
-        compact 
-          ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' 
-          : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'
-      }`}>
-        {sortedTechCards.map((techCard) => (
-          <TechCardCard
-            key={techCard.id}
-            techCard={techCard}
-            onView={onView}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onStatusChange={onStatusChange}
-            compact={compact}
-          />
-        ))}
-      </div>
+              {/* Кнопки действий */}
+              {onCardEdit && (
+                <div className="mt-3 pt-3 border-t">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCardEdit(card);
+                    }}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    ✏️ Редактировать
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };
 
 export default TechCardList;
+
