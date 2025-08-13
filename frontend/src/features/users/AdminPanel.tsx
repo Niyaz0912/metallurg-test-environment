@@ -4,6 +4,7 @@ import { useAuth } from '../auth/hooks/useAuth';
 import UserList from './components/UserList';
 import UserCreateForm from './components/UserCreateForm';
 import ProductionPlansManager from './components/ProductionPlansManager';
+import TechCardsManager from './components/TechCardsManager';
 
 interface User {
   id: number;
@@ -23,7 +24,7 @@ const AdminPanel: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  const [activeSection, setActiveSection] = useState<'users' | 'plans'>('users'); // ✅ Перенесено внутрь компонента
+  const [activeSection, setActiveSection] = useState<'users' | 'plans' | 'techcards'>('users');
 
   // Проверка прав доступа
   if (!user || user.role !== 'admin') {
@@ -66,11 +67,11 @@ const AdminPanel: React.FC = () => {
 
   const handleUserCreated = () => {
     setShowCreateForm(false);
-    fetchUsers(); // Обновляем список пользователей
+    fetchUsers();
   };
 
   const handleUserDeleted = () => {
-    fetchUsers(); // Обновляем список пользователей
+    fetchUsers();
   };
 
   if (loading || loadingUsers) {
@@ -120,6 +121,16 @@ const AdminPanel: React.FC = () => {
           >
             📋 Планы производства
           </button>
+          <button
+            onClick={() => setActiveSection('techcards')}
+            className={`px-4 py-2 rounded ${
+              activeSection === 'techcards' 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            📄 Техкарты
+          </button>
         </div>
 
         {/* Условный рендеринг секций */}
@@ -135,14 +146,12 @@ const AdminPanel: React.FC = () => {
               </button>
             </div>
 
-            {/* Форма создания пользователя */}
             {showCreateForm && (
               <div className="mb-6 p-4 bg-gray-50 rounded">
                 <UserCreateForm onUserCreated={handleUserCreated} />
               </div>
             )}
 
-            {/* Список пользователей */}
             <UserList 
               users={users} 
               onUserDeleted={handleUserDeleted}
@@ -152,6 +161,10 @@ const AdminPanel: React.FC = () => {
 
         {activeSection === 'plans' && (
           <ProductionPlansManager />
+        )}
+
+        {activeSection === 'techcards' && (
+          <TechCardsManager />
         )}
       </div>
 
