@@ -2,42 +2,59 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Проверяем, есть ли уже запись с ID = 1
-    const existingCard = await queryInterface.sequelize.query(
-      'SELECT id FROM tech_cards WHERE id = 1',
-      { type: Sequelize.QueryTypes.SELECT }
-    );
-
-    // Создаем только если записи нет
-    if (existingCard.length === 0) {
-      await queryInterface.bulkInsert('tech_cards', [
-        {
-          id: 1,
-          productName: 'Универсальная карта',
-          description: 'Базовая техническая карта для всех операций',
-          specifications: JSON.stringify({
-            type: 'universal',
-            applicableOperations: ['machining', 'assembly', 'quality_control']
-          }),
-          operationSteps: JSON.stringify([
-            { step: 1, description: 'Подготовка оборудования' },
-            { step: 2, description: 'Выполнение операции' },
-            { step: 3, description: 'Контроль качества' }
-          ]),
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      ], {});
-
-      console.log('✅ Базовая техническая карта создана');
-    } else {
-      console.log('ℹ️ Базовая техническая карта уже существует');
-    }
+    return queryInterface.bulkInsert('tech_cards', [
+      {
+        id: 1,
+        customer: 'ПАО Северсталь',
+        order: 'Заказ-2024-001',
+        productName: 'Корпус подшипникового узла',
+        partNumber: 'КПУ-001-2024',
+        quantity: 100,
+        pdfUrl: '/uploads/tech-cards/sample-tech-card-001.pdf',
+        totalProducedQuantity: 0,
+        status: 'active',
+        priority: 'high',
+        plannedEndDate: new Date('2024-03-01'),
+        notes: 'Тестовая техкарта для демонстрации системы',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 2,
+        customer: 'ООО Машзавод',
+        order: 'Заказ-2024-002',
+        productName: 'Роликовый механизм',
+        partNumber: 'РМ-002-2024',
+        quantity: 50,
+        pdfUrl: '/uploads/tech-cards/sample-tech-card-002.pdf',
+        totalProducedQuantity: 10,
+        status: 'active',
+        priority: 'medium',
+        plannedEndDate: new Date('2024-04-01'),
+        notes: 'Техкарта для роликового механизма конвейера',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 3,
+        customer: 'АО Металлург',
+        order: 'Заказ-2024-003',
+        productName: 'Вал приводной',
+        partNumber: 'ВП-003-2024',
+        quantity: 75,
+        pdfUrl: '/uploads/tech-cards/sample-tech-card-003.pdf',
+        totalProducedQuantity: 0,
+        status: 'draft',
+        priority: 'low',
+        plannedEndDate: new Date('2024-05-01'),
+        notes: 'Техкарта для изготовления приводного вала',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ], {});
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.bulkDelete('tech_cards', { id: 1 }, {});
-    console.log('🗑️ Базовая техническая карта удалена');
+    return queryInterface.bulkDelete('tech_cards', null, {});
   }
 };
-
