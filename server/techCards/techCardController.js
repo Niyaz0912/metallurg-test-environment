@@ -1,4 +1,5 @@
 const { TechCard, TechCardExecution, TechCardAccess, User } = require('../models');
+const { checkTableFields, getAvailableFields } = require('../utils/dbFieldsHelper');
 
 // Проверка прав доступа
 const hasManagePermission = (userRole) => userRole === 'master' || userRole === 'admin';
@@ -22,29 +23,35 @@ const logTechCardAccess = async (techCardId, userId, action = 'view') => {
 // GET /api/techcards - список всех карт (упрощенный)
 const getAllTechCards = async (req, res) => {
   try {
-    if (!hasViewPermission(req.user.role)) {
-      return res.status(403).json({ error: 'Доступ запрещён' });
-    }
-
+    console.log('📋 Получение всех техкарт...');
+    
+    // Проверяем доступные поля в БД
+    const availableFields = await checkTableFields('tech_cards');
+    console.log('🔍 Доступные поля tech_cards:', availableFields);
+    
+    // Поля которые мы хотим получить (для разных БД)
+    const desiredFields = [
+      'id', 'productName', 'description', 'drawingUrl', 
+      'specifications', 'productionStages', 'createdAt', 'updatedAt',
+      'partNumber', 'customer', 'order', 'quantity', 'pdfUrl', 
+      'pdfFileSize', 'totalProducedQuantity', 'status', 'priority',
+      'plannedEndDate', 'actualEndDate', 'notes', 'createdById'
+    ];
+    
+    // Получаем только доступные поля
+    const fieldsToSelect = getAvailableFields(desiredFields, availableFields);
+    console.log('✅ Выбираем поля:', fieldsToSelect);
+    
     const techCards = await TechCard.findAll({
-      include: [
-        { 
-          model: TechCardExecution, 
-          as: 'executions',
-          include: [
-            { model: User, as: 'executor', attributes: ['id', 'firstName', 'lastName'] }
-          ],
-          required: false
-        },
-        { model: User, as: 'creator', attributes: ['id', 'firstName', 'lastName'], required: false }
-      ],
+      attributes: fieldsToSelect,
       order: [['createdAt', 'DESC']]
     });
-
+    
+    console.log(`✅ Найдено техкарт: ${techCards.length}`);
     res.json(techCards);
   } catch (error) {
-    console.error('Get all tech cards error:', error);
-    res.status(500).json({ error: 'Ошибка при получении технологических карт' });
+    console.error('❌ Ошибка получения техкарт:', error);
+    res.status(500).json({ message: 'Ошибка при получении техкарт' });
   }
 };
 

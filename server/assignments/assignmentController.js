@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const AssignmentExcelParser = require('./excelParser');
+const { checkTableFields, getAvailableFields } = require('../utils/dbFieldsHelper');
 
 // Настройка multer для Excel файлов
 const storage = multer.diskStorage({
@@ -45,21 +46,40 @@ exports.getAssignments = async (req, res) => {
       return res.status(403).json({ message: 'Доступ запрещён' });
     }
 
+    // Проверяем доступные поля в БД
+    const availableFields = await checkTableFields('assignments');
+    console.log('🔍 Доступные поля assignments:', availableFields);
+
+    // Поля для разных структур БД  
+    const desiredFields = [
+      'id', 'operatorId', 'shiftDate', 'taskDescription', 'machineNumber',
+      'detailName', 'customerName', 'plannedQuantity', 'actualQuantity',
+      'techCardId', 'createdAt', 'updatedAt', 'productionPlanId', 
+      'shiftType', 'status', 'startedAt', 'completedAt', 'notes'
+    ];
+
+    const fieldsToSelect = getAvailableFields(desiredFields, availableFields);
+    console.log('✅ Выбираем поля:', fieldsToSelect);
+
     const whereCondition = hasManagePermission(user.role) ? {} : { operatorId: user.userId };
     const includeOperator = hasManagePermission(user.role) ? [
       { model: db.User, as: 'operator', attributes: ['id', 'firstName', 'lastName', 'username'] }
     ] : [];
 
     const assignments = await db.Assignment.findAll({
+      attributes: fieldsToSelect,
       where: whereCondition,
       include: [
         ...includeOperator,
-        { model: db.TechCard, as: 'techCard', attributes: ['id', 'productName'] } // ✅ Убрано 'description'
+        { 
+          model: db.TechCard, 
+          as: 'techCard', 
+          attributes: ['id', 'productName'] 
+        }
       ],
       order: [['createdAt', 'DESC']]
     });
 
-    // ✅ Обработка пустого результата
     if (!assignments || assignments.length === 0) {
       return res.json({
         message: 'У вас пока нет назначенных заданий',
@@ -67,9 +87,10 @@ exports.getAssignments = async (req, res) => {
       });
     }
 
+    console.log(`✅ Найдено заданий: ${assignments.length}`);
     res.json(assignments);
   } catch (e) {
-    console.error('Get assignments error:', e);
+    console.error('❌ Get assignments error:', e);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
