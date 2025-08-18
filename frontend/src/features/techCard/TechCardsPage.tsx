@@ -406,7 +406,7 @@ const TechCardsPage: React.FC = () => {
       {showCreateForm && (
         <TechCardForm
           onSuccess={handleFormSuccess}
-          onCancel={closeAllModals}
+          onClose={closeAllModals}
         />
       )}
 
@@ -414,7 +414,7 @@ const TechCardsPage: React.FC = () => {
         <TechCardForm
           techCard={selectedCard}
           onSuccess={handleFormSuccess}
-          onCancel={closeAllModals}
+          onClose={closeAllModals}
         />
       )}
 

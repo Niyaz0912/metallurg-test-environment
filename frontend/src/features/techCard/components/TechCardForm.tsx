@@ -11,14 +11,20 @@ import {
   type TechCardStatus
 } from '../../../shared/api/techCardsApi';
 
-// ✅ ИСПРАВЛЕНО: Добавлен onClose в интерфейс
+// ✅ ИСПРАВЛЕНО: Добавлен onClose и onSuccess в интерфейс
 interface TechCardFormProps {
   techCard?: TechCard;
-  isEdit: boolean;
-  onClose: () => void; // ← Добавляем обязательный пропс
+  isEdit?: boolean;
+  onClose: () => void; // ← Обязательный пропс
+  onSuccess?: () => void; // ← Новый необязательный пропс
 }
 
-const TechCardForm: React.FC<TechCardFormProps> = ({ techCard, isEdit, onClose }) => {
+const TechCardForm: React.FC<TechCardFormProps> = ({ 
+  techCard, 
+  isEdit = false, 
+  onClose, 
+  onSuccess 
+}) => {
   const [formData, setFormData] = useState<CreateTechCardData & { file?: File }>({
     customer: techCard?.customer || '',
     order: techCard?.order || '',
@@ -88,6 +94,9 @@ const TechCardForm: React.FC<TechCardFormProps> = ({ techCard, isEdit, onClose }
 
       // ✅ Используем onClose для закрытия формы
       onClose();
+      
+      // ✅ Вызываем onSuccess если передан
+      onSuccess && onSuccess();
       
     } catch (error) {
       console.error('Ошибка при сохранении:', error);
