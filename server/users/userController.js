@@ -1,5 +1,5 @@
 const db = require('../models');
-const bcrypt = require('bcrypt');
+// const bcrypt = require('bcrypt'); // ❌ ОТКЛЮЧЕНО для тестовой среды
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const nodemailer = require('nodemailer');
@@ -44,8 +44,11 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Пользователь с таким именем уже существует' });
     }
 
-    // Хэширование пароля
-    const passwordHash = await bcrypt.hash(password, 10);
+    // ❌ ОТКЛЮЧЕНО: Хэширование пароля для тестовой среды
+    // const passwordHash = await bcrypt.hash(password, 10);
+    
+    // ✅ ТЕСТОВАЯ СРЕДА: Сохраняем пароль как есть
+    const passwordHash = password; // простой текст для тестов
 
     // Создание пользователя
     const user = await db.User.create({
@@ -77,14 +80,14 @@ exports.register = async (req, res) => {
   }
 };
 
-// Логин - ОБНОВЛЕННАЯ ВЕРСИЯ
+// Логин - УПРОЩЕННАЯ ВЕРСИЯ ДЛЯ ТЕСТОВОЙ СРЕДЫ
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
     
     console.log('🔍 Попытка входа:', username);
     
-    // Используем scope 'withPassword' для получения хеша
+    // Используем scope 'withPassword' для получения пароля
     const user = await db.User.scope('withPassword').findOne({
       where: { username },
       include: [{ model: db.Department, as: 'department' }]
@@ -98,9 +101,10 @@ exports.login = async (req, res) => {
     }
 
     const { passwordHash } = user;
-    console.log('🔑 Хеш получен:', passwordHash ? 'ДА' : 'НЕТ');
+    console.log('🔑 Пароль получен:', passwordHash ? 'ДА' : 'НЕТ');
     
-    // Проверка пароля только через bcrypt
+    // ❌ ОТКЛЮЧЕНО: Проверка пароля через bcrypt для продакшена
+    /*
     let passwordValid = false;
     
     if (passwordHash && passwordHash.startsWith('$2b$')) {
@@ -115,6 +119,11 @@ exports.login = async (req, res) => {
       console.log('❌ Неправильный формат хеша пароля');
       passwordValid = false;
     }
+    */
+
+    // ✅ ТЕСТОВАЯ СРЕДА: Простая проверка пароля
+    const passwordValid = password === passwordHash;
+    console.log('🔑 Проверка пароля для', username, ':', passwordValid);
 
     if (!passwordValid) {
       console.log('❌ Неверный пароль для:', username);
@@ -169,7 +178,7 @@ exports.getMe = async (req, res) => {
           required: false
         }
       ],
-      attributes: ['id', 'firstName', 'lastName', 'role', 'position', 'departmentId'] // ✅ ДОБАВЛЕН departmentId
+      attributes: ['id', 'firstName', 'lastName', 'role', 'position', 'departmentId']
     });
 
     if (!user) {
@@ -189,13 +198,13 @@ exports.getMe = async (req, res) => {
       lastName: user.lastName,
       role: user.role,
       position: user.position,
-      departmentId: user.departmentId, // ✅ ВКЛЮЧИТЬ departmentId в ответ
+      departmentId: user.departmentId,
       department: user.department 
         ? { id: user.department.id, name: user.department.name }
         : null
     };
 
-    console.log('👤 Отправляем данные пользователя:', userData); // Для отладки
+    console.log('👤 Отправляем данные пользователя:', userData);
 
     res.json({ user: userData });
   } catch (error) {
@@ -297,7 +306,7 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-// В userController.js
+// Обновление роли пользователя
 exports.updateUserRole = async (req, res) => {
   try {
     const { id } = req.params;
@@ -324,3 +333,4 @@ exports.updateUserRole = async (req, res) => {
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
+
