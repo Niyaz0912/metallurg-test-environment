@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  mysql_db:
+    image: mysql:8.0
+    container_name: metallurg_mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DB_USERNAME}", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: metallurg_backend
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_HOST: mysql_db # Используем имя сервиса MySQL в Docker Compose
+      DB_DIALECT: mysql
+      JWT_SECRET: your_jwt_secret_key # Замените на реальный секретный ключ
+    depends_on:
+      mysql_db:
+        condition: service_healthy
+    volumes:
+      - ./server:/app
+      - /app/node_modules # Чтобы не монтировать node_modules из хоста
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: metallurg_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:3001 # URL для фронтенда, если он будет в том же Docker Compose сети
+
+volumes:
+  mysql_data:

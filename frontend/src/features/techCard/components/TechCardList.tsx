@@ -10,9 +10,12 @@ import {
 
 interface TechCardListProps {
   techCards: TechCard[];
-  onCardClick?: (card: TechCard) => void;
-  onCardEdit?: (card: TechCard) => void;
+  onView: (card: TechCard) => void;  // ← добавить эту строку
+  onEdit?: (card: TechCard) => void;
+  onDelete?: (card: TechCard) => void;
+  onStatusChange?: (card: TechCard, newStatus: 'draft' | 'active' | 'archived') => Promise<void>;
 }
+
 
 const TechCardList: React.FC<TechCardListProps> = ({ 
   techCards, 

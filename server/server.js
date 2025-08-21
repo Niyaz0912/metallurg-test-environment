@@ -24,7 +24,24 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Настройка CORS
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: [
+    'http://localhost:5173',   // Веб-версия (Vite)
+    'http://localhost:3000',   // Веб-версия (Create React App)
+    'http://localhost:8081',   // Expo Metro Bundler
+    'http://localhost:19000',  // Expo
+    'http://localhost:19002',  // Expo
+    'http://192.168.1.180:8081', // Мобильное устройство (Expo Metro Bundler)
+    'http://192.168.1.180:19000', // Мобильное устройство (Expo)
+    'http://192.168.1.180:19002', // Мобильное устройство (Expo)
+    'http://10.0.2.2:8081',    // Android эмулятор (Metro Bundler)
+    'http://10.0.2.2:19000',   // Android эмулятор (Expo)
+    'http://10.0.2.2:19002',   // Android эмулятор (Expo)
+    'http://localhost',        // Общий localhost
+    'capacitor://localhost',   // Capacitor
+    'ionic://localhost'        // Ionic
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 

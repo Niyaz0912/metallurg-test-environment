@@ -466,5 +466,4 @@ export type {
   UpdateTechCardData,
   TechCardFilters,
 };
-;
 
