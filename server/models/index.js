@@ -1,18 +1,18 @@
 'use strict';
 
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
+const Sequelize = require('sequelize');
+// УБИРАЕМ импорт process - он глобально доступен!
+const basename = path.basename(__filename);
 
+// ОТЛАДОЧНАЯ ИНФОРМАЦИЯ
 console.log('🔍 DEBUG: Environment detection');
 console.log('NODE_ENV from process.env:', process.env.NODE_ENV);
 console.log('RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT);
 console.log('MYSQLHOST:', process.env.MYSQLHOST);
 console.log('MYSQLDATABASE:', process.env.MYSQLDATABASE);
-
-const fs = require('fs');
-const path = require('path');
-const Sequelize = require('sequelize');
-const process = require('process');
-const basename = path.basename(__filename);
 
 // ПРИНУДИТЕЛЬНО УСТАНАВЛИВАЕМ PRODUCTION для Railway
 const env = process.env.RAILWAY_ENVIRONMENT ? 'production' : (process.env.NODE_ENV || 'development');
@@ -20,8 +20,6 @@ const env = process.env.RAILWAY_ENVIRONMENT ? 'production' : (process.env.NODE_E
 console.log('🎯 Final ENV mode:', env);
 
 const db = {};
-
-// Инициализация Sequelize
 let sequelize;
 
 if (env === 'test') {
@@ -32,19 +30,24 @@ if (env === 'test') {
     logging: false,
   });
 } else if (env === 'production') {
-  // Для production на Railway используем ТОЛЬКО Railway переменные
-  console.log('🔍 Production mode - using Railway MySQL variables');
-  console.log('MYSQLHOST:', process.env.MYSQLHOST ? 'SET' : 'NOT SET');
-  console.log('MYSQLDATABASE:', process.env.MYSQLDATABASE ? 'SET' : 'NOT SET');
+  console.log('🚀 PRODUCTION MODE - Using Railway MySQL');
+  
+  // Проверяем все переменные
+  const requiredVars = ['MYSQLHOST', 'MYSQLUSER', 'MYSQLPASSWORD', 'MYSQLDATABASE'];
+  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+  
+  if (missingVars.length > 0) {
+    console.error('❌ Missing required MySQL variables:', missingVars);
+  }
   
   sequelize = new Sequelize({
-    database: process.env.MYSQLDATABASE || 'railway',
-    username: process.env.MYSQLUSER || 'root', 
+    database: process.env.MYSQLDATABASE,
+    username: process.env.MYSQLUSER,
     password: process.env.MYSQLPASSWORD,
-    host: process.env.MYSQLHOST || 'mysql.railway.internal',
+    host: process.env.MYSQLHOST,
     port: process.env.MYSQLPORT || 3306,
     dialect: 'mysql',
-    logging: console.log,
+    logging: false, // Убираем SQL логи для чистоты
     pool: {
       max: 5,
       min: 0,
@@ -56,57 +59,21 @@ if (env === 'test') {
     }
   });
 } else {
-  // Для development пытаемся загрузить config с проверками
-  let config;
+  console.log('⚠️ DEVELOPMENT MODE - This should not happen on Railway!');
   
-  try {
-    // Сначала пробуем config.js
-    config = require(__dirname + '/../config/config.js')[env];
-  } catch (error) {
-    try {
-      // Если config.js не найден, пробуем config.json
-      config = require(__dirname + '/../config/config.json')[env];
-    } catch (jsonError) {
-      console.warn('⚠️ No config file found, using environment variables');
-      config = {};
-    }
-  }
-  
-  if (config && config.use_env_variable) {
-    sequelize = new Sequelize(process.env[config.use_env_variable], config);
-  } else if (config && config.database) {
-    sequelize = new Sequelize(
-      config.database,
-      config.username,
-      config.password,
-      {
-        host: config.host || 'localhost',
-        dialect: config.dialect || 'mysql',
-        logging: config.logging || false,
-        pool: {
-          max: 5,
-          min: 0,
-          acquire: 30000,
-          idle: 10000
-        }
-      }
-    );
-  } else {
-    // Fallback к переменным окружения для development
-    console.warn('⚠️ Using environment variables for development');
-    sequelize = new Sequelize({
-      database: process.env.DB_NAME || 'metallurgdb',
-      username: process.env.DB_USERNAME || 'root',
-      password: process.env.DB_PASSWORD,
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 3306,
-      dialect: 'mysql',
-      logging: false,
-    });
-  }
+  // Fallback к переменным окружения для development
+  sequelize = new Sequelize({
+    database: process.env.DB_NAME || 'metallurgdb',
+    username: process.env.DB_USERNAME || 'root',
+    password: process.env.DB_PASSWORD,
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306,
+    dialect: 'mysql',
+    logging: false,
+  });
 }
 
-// Загрузка моделей ПЕРЕД проверкой подключения
+// Загрузка моделей
 fs.readdirSync(__dirname)
   .filter(file => {
     return (
