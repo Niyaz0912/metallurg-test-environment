@@ -9,20 +9,25 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "echo 'Нет настроенного линтера!'",
-    "test": "echo 'Нет тестов!'"
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.51.1",
     "@types/react-router-dom": "^5.3.3",
+    "axios": "^1.7.2",
     "lucide-react": "^0.344.0",
     "pdfjs-dist": "^5.4.54",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-pdf": "^10.0.1",
-    "react-router-dom": "^7.7.0",
-    "@tanstack/react-query": "^5.51.1",
-    "axios": "^1.7.2"
+    "react-router-dom": "^7.7.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^24.2.1",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
@@ -31,10 +36,12 @@
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.33.0",
+    "jsdom": "^22.1.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.5.3",
-    "vite": "^5.4.19"
+    "vite": "^5.4.19",
+    "vitest": "^1.6.1"
   },
   "overrides": {
     "esbuild": "^0.25.0"

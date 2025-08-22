@@ -7,12 +7,12 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["vite/client", "@types/node"], 
+    "types": ["vite/client", "@types/node", "vitest/globals"], 
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -24,7 +24,8 @@
     "src/**/*",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "src/vite-env.d.ts"
+    "src/vite-env.d.ts",
+    "vite.config.js"
   ],
   "exclude": [
     "node_modules",
@@ -35,3 +36,4 @@
     { "path": "./tsconfig.node.json" }
   ]
 }
+

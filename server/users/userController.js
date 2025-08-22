@@ -85,6 +85,11 @@ exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
     
+    // ✅ ДОБАВЛЕНА ПРОВЕРКА: Валидация входных данных
+    if (!username || !password) {
+      return res.status(401).json({ message: 'Неверный логин или пароль' });
+    }
+    
     console.log('🔍 Попытка входа:', username);
     
     // Используем scope 'withPassword' для получения пароля
@@ -333,4 +338,3 @@ exports.updateUserRole = async (req, res) => {
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
-

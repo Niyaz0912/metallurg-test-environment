@@ -16,11 +16,10 @@ interface TechCardListProps {
   onStatusChange?: (card: TechCard, newStatus: 'draft' | 'active' | 'archived') => Promise<void>;
 }
 
-
 const TechCardList: React.FC<TechCardListProps> = ({ 
   techCards, 
-  onCardClick,
-  onCardEdit 
+  onView,
+  onEdit
 }) => {
   const getPriorityText = (priority: string) => {
     const priorities = {
@@ -62,7 +61,7 @@ const TechCardList: React.FC<TechCardListProps> = ({
           <div
             key={card.id}
             className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => onCardClick?.(card)}
+            onClick={() => onView?.(card)} // ← Исправлено: onCardClick -> onView
           >
             {/* Заголовок карточки */}
             <div className="p-4 border-b">
@@ -144,12 +143,12 @@ const TechCardList: React.FC<TechCardListProps> = ({
               )}
 
               {/* Кнопки действий */}
-              {onCardEdit && (
+              {onEdit && ( // ← Исправлено: onCardEdit -> onEdit
                 <div className="mt-3 pt-3 border-t">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onCardEdit(card);
+                      onEdit(card); // ← Исправлено: onCardEdit -> onEdit
                     }}
                     className="text-sm text-blue-600 hover:text-blue-800"
                   >
@@ -166,4 +165,3 @@ const TechCardList: React.FC<TechCardListProps> = ({
 };
 
 export default TechCardList;
-
