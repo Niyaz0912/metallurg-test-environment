@@ -19,8 +19,28 @@ if (env === 'test') {
     storage: ':memory:',
     logging: false,
   });
+} else if (env === 'production') {
+  // Для production на Railway используем прямые переменные окружения
+  sequelize = new Sequelize({
+    database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'metallurgdb',
+    username: process.env.MYSQLUSER || process.env.DB_USERNAME || 'metuser',
+    password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD,
+    host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
+    port: process.env.MYSQLPORT || process.env.DB_PORT || 3306,
+    dialect: 'mysql', // Жестко задаем, чтобы избежать проблем с переменными
+    logging: false,
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    },
+    dialectOptions: {
+      connectTimeout: 60000,
+    }
+  });
 } else {
-  // Для остальных сред используем config.js
+  // Для development используем config.js
   const config = require(__dirname + '/../config/config.js')[env];
   
   if (config.use_env_variable) {
@@ -32,8 +52,8 @@ if (env === 'test') {
       config.password,
       {
         host: config.host,
-        dialect: config.dialect,
-        logging: config.logging,
+        dialect: 'mysql', // Жестко задаем вместо config.dialect
+        logging: config.logging || false,
         pool: {
           max: 5,
           min: 0,
@@ -50,9 +70,17 @@ if (env !== 'test') {
   (async () => {
     try {
       await sequelize.authenticate();
-      console.log('Connection to database has been established successfully.');
+      console.log('✅ Database connection established');
+      console.log('🔄 Database sync disabled (preventing key duplication)');
+      
+      // Синхронизация моделей (только в development)
+      if (env === 'development') {
+        await sequelize.sync({ alter: false });
+        console.log('🔄 Database models synced');
+      }
     } catch (error) {
-      console.error('Unable to connect to the database:', error);
+      console.error('❌ Unable to connect to the database:', error.message);
+      console.error('📚 Stack:', error.stack);
     }
   })();
 }
