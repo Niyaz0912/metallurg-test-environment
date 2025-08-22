@@ -33,6 +33,7 @@
     "clean:backend": "cd server && npx rimraf node_modules dist",
     "clean:all": "npm run clean && npx rimraf node_modules",
     "setup": "npm run install:all && npm run test",
+    "start": "node server/server.js",
     "postinstall": "echo Run npm run install:all to install all dependencies"
   },
   "workspaces": [
