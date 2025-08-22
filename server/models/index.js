@@ -1,12 +1,24 @@
 'use strict';
 
 require('dotenv').config();
+
+console.log('🔍 DEBUG: Environment detection');
+console.log('NODE_ENV from process.env:', process.env.NODE_ENV);
+console.log('RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT);
+console.log('MYSQLHOST:', process.env.MYSQLHOST);
+console.log('MYSQLDATABASE:', process.env.MYSQLDATABASE);
+
 const fs = require('fs');
 const path = require('path');
 const Sequelize = require('sequelize');
 const process = require('process');
 const basename = path.basename(__filename);
-const env = process.env.NODE_ENV || 'development';
+
+// ПРИНУДИТЕЛЬНО УСТАНАВЛИВАЕМ PRODUCTION для Railway
+const env = process.env.RAILWAY_ENVIRONMENT ? 'production' : (process.env.NODE_ENV || 'development');
+
+console.log('🎯 Final ENV mode:', env);
+
 const db = {};
 
 // Инициализация Sequelize
@@ -32,7 +44,7 @@ if (env === 'test') {
     host: process.env.MYSQLHOST || 'mysql.railway.internal',
     port: process.env.MYSQLPORT || 3306,
     dialect: 'mysql',
-    logging: false,
+    logging: console.log,
     pool: {
       max: 5,
       min: 0,
