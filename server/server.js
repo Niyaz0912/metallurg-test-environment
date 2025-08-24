@@ -157,6 +157,34 @@ app.get('/api/files/test', (req, res) => {
   }
 });
 
+// ✅ ДОБАВЛЕН: Корневой маршрут для главной страницы
+app.get('/', (req, res) => {
+  res.json({
+    message: '🏭 Добро пожаловать в Metallurg App!',
+    status: 'success',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    server: 'Railway Production',
+    database: 'MySQL',
+    description: 'Система управления металлургическим производством',
+    api_info: {
+      base_url: '/api',
+      documentation: '/api',
+      health_check: '/api/health',
+      file_test: '/api/files/test'
+    },
+    endpoints: {
+      departments: '/api/departments',
+      users: '/api/users', 
+      assignments: '/api/assignments',
+      tasks: '/api/tasks',
+      techcards: '/api/techcards',
+      production_plans: '/api/productionPlans'
+    }
+  });
+});
+
+
 // Маршрут для получения информации об API
 app.get('/api', (req, res) => {
   res.json({
