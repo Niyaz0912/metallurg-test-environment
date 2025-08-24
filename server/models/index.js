@@ -120,7 +120,14 @@ if (env !== 'test') {
       await sequelize.authenticate();
       console.log('✅ Database connection established successfully');
       
-      // Синхронизация моделей (только в development)
+      // ВРЕМЕННО: Принудительно создаем таблицы в production
+      if (env === 'production') {
+        console.log('🔄 Creating tables automatically...');
+        await sequelize.sync({ force: false, alter: true });
+        console.log('✅ All tables created successfully');
+      }
+      
+      // Синхронизация моделей в development
       if (env === 'development') {
         await sequelize.sync({ alter: false });
         console.log('🔄 Database models synced');
