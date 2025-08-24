@@ -4,14 +4,14 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const Sequelize = require('sequelize');
-// УБИРАЕМ импорт process - он глобально доступен!
 const basename = path.basename(__filename);
 
 // ОТЛАДОЧНАЯ ИНФОРМАЦИЯ
 console.log('🔍 DEBUG: Environment detection');
 console.log('NODE_ENV from process.env:', process.env.NODE_ENV);
 console.log('RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT);
-console.log('MYSQLHOST:', process.env.MYSQLHOST);
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
+console.log('MYSQLHOST:', process.env.MYSQLHOST ? 'SET' : 'NOT SET');
 console.log('MYSQLDATABASE:', process.env.MYSQLDATABASE);
 
 // ПРИНУДИТЕЛЬНО УСТАНАВЛИВАЕМ PRODUCTION для Railway
@@ -32,36 +32,54 @@ if (env === 'test') {
 } else if (env === 'production') {
   console.log('🚀 PRODUCTION MODE - Using Railway MySQL');
   
-  // Проверяем все переменные
-  const requiredVars = ['MYSQLHOST', 'MYSQLUSER', 'MYSQLPASSWORD', 'MYSQLDATABASE'];
-  const missingVars = requiredVars.filter(varName => !process.env[varName]);
-  
-  if (missingVars.length > 0) {
-    console.error('❌ Missing required MySQL variables:', missingVars);
+  // ПРИОРИТЕТ 1: Используем DATABASE_URL (рекомендуемый способ Railway)
+  if (process.env.DATABASE_URL) {
+    console.log('✅ Using DATABASE_URL connection');
+    sequelize = new Sequelize(process.env.DATABASE_URL, {
+      dialect: 'mysql',
+      logging: false,
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+      },
+      dialectOptions: {
+        connectTimeout: 60000,
+      }
+    });
+  } 
+  // ПРИОРИТЕТ 2: Fallback на отдельные переменные
+  else if (process.env.MYSQLHOST && process.env.MYSQLDATABASE) {
+    console.log('⚠️ Using separate MySQL variables');
+    sequelize = new Sequelize({
+      database: process.env.MYSQLDATABASE,
+      username: process.env.MYSQLUSER,
+      password: process.env.MYSQLPASSWORD,
+      host: process.env.MYSQLHOST,
+      port: process.env.MYSQLPORT || 3306,
+      dialect: 'mysql',
+      logging: false,
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+      },
+      dialectOptions: {
+        connectTimeout: 60000,
+      }
+    });
+  } 
+  // ОШИБКА: Нет переменных для подключения
+  else {
+    console.error('❌ No database connection variables found!');
+    console.error('   Need either DATABASE_URL or MYSQL* variables');
   }
-  
-  sequelize = new Sequelize({
-    database: process.env.MYSQLDATABASE,
-    username: process.env.MYSQLUSER,
-    password: process.env.MYSQLPASSWORD,
-    host: process.env.MYSQLHOST,
-    port: process.env.MYSQLPORT || 3306,
-    dialect: 'mysql',
-    logging: false, // Убираем SQL логи для чистоты
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
-    },
-    dialectOptions: {
-      connectTimeout: 60000,
-    }
-  });
 } else {
-  console.log('⚠️ DEVELOPMENT MODE - This should not happen on Railway!');
+  console.log('⚠️ DEVELOPMENT MODE');
   
-  // Fallback к переменным окружения для development
+  // Для development используем локальные настройки
   sequelize = new Sequelize({
     database: process.env.DB_NAME || 'metallurgdb',
     username: process.env.DB_USERNAME || 'root',
@@ -124,4 +142,5 @@ db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
 module.exports = db;
+
 
