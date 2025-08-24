@@ -157,12 +157,8 @@ app.get('/api/files/test', (req, res) => {
   }
 });
 
-// Корневой маршрут - перенаправление на фронтенд
+// ✅ ИСПРАВЛЕН: Корневой маршрут БЕЗ дублирования
 app.get('/', (req, res) => {
-  // Если у вас фронтенд развернут отдельно (например на Vercel)
-  res.redirect('https://ваш-фронтенд-домен.vercel.app');
-  
-  // Или показать простую страницу со ссылкой
   res.send(`
     <!DOCTYPE html>
     <html>
@@ -170,32 +166,49 @@ app.get('/', (req, res) => {
         <title>Metallurg App</title>
         <meta charset="utf-8">
         <style>
-            body { font-family: Arial; text-align: center; margin: 50px; }
-            .container { max-width: 500px; margin: 0 auto; }
-            a { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 10px; }
+            body { font-family: Arial; text-align: center; margin: 50px; background: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            h1 { color: #333; margin-bottom: 10px; }
+            p { color: #666; margin-bottom: 30px; }
+            .section { margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 5px; }
+            a { display: inline-block; padding: 12px 25px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 5px; transition: background 0.3s; }
+            a:hover { background: #0056b3; }
+            .credentials { background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0; }
         </style>
     </head>
     <body>
         <div class="container">
             <h1>🏭 Metallurg App</h1>
-            <p>Система управления производством</p>
+            <p>Система управления металлургическим производством</p>
             
-            <h3>Доступы:</h3>
-            <a href="https://ваш-фронтенд-домен.vercel.app" target="_blank">Открыть приложение</a>
+            <div class="section">
+                <h3>📱 Доступы к приложению:</h3>
+                <p>Фронтенд приложение будет развернут отдельно</p>
+                <a href="/api" target="_blank">📚 API Документация</a>
+                <a href="/api/health" target="_blank">💚 Статус сервера</a>
+                <a href="/api/files/test" target="_blank">📁 Тест файлов</a>
+            </div>
             
-            <h3>API Документация:</h3>
-            <a href="/api" target="_blank">API Endpoints</a>
-            <a href="/api/health" target="_blank">Статус сервера</a>
+            <div class="credentials">
+                <h3>🔑 Тестовые данные для входа:</h3>
+                <p><strong>Логин:</strong> admin</p>
+                <p><strong>Пароль:</strong> 123456</p>
+                <p><em>Используйте эти данные при подключении фронтенда</em></p>
+            </div>
             
-            <h3>Тестовые данные:</h3>
-            <p><strong>Логин:</strong> admin</p>
-            <p><strong>Пароль:</strong> 123456</p>
+            <div class="section">
+                <h3>🔗 API Endpoints:</h3>
+                <p>Все API маршруты доступны по префиксу <code>/api/</code></p>
+                <a href="/api/users" target="_blank">👤 Users</a>
+                <a href="/api/departments" target="_blank">🏢 Departments</a>
+                <a href="/api/tasks" target="_blank">✅ Tasks</a>
+                <a href="/api/techcards" target="_blank">📄 Tech Cards</a>
+            </div>
         </div>
     </body>
     </html>
   `);
 });
-
 
 // Маршрут для получения информации об API
 app.get('/api', (req, res) => {
