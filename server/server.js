@@ -157,31 +157,43 @@ app.get('/api/files/test', (req, res) => {
   }
 });
 
-// ✅ ДОБАВЛЕН: Корневой маршрут для главной страницы
+// Корневой маршрут - перенаправление на фронтенд
 app.get('/', (req, res) => {
-  res.json({
-    message: '🏭 Добро пожаловать в Metallurg App!',
-    status: 'success',
-    version: '1.0.0',
-    timestamp: new Date().toISOString(),
-    server: 'Railway Production',
-    database: 'MySQL',
-    description: 'Система управления металлургическим производством',
-    api_info: {
-      base_url: '/api',
-      documentation: '/api',
-      health_check: '/api/health',
-      file_test: '/api/files/test'
-    },
-    endpoints: {
-      departments: '/api/departments',
-      users: '/api/users', 
-      assignments: '/api/assignments',
-      tasks: '/api/tasks',
-      techcards: '/api/techcards',
-      production_plans: '/api/productionPlans'
-    }
-  });
+  // Если у вас фронтенд развернут отдельно (например на Vercel)
+  res.redirect('https://ваш-фронтенд-домен.vercel.app');
+  
+  // Или показать простую страницу со ссылкой
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Metallurg App</title>
+        <meta charset="utf-8">
+        <style>
+            body { font-family: Arial; text-align: center; margin: 50px; }
+            .container { max-width: 500px; margin: 0 auto; }
+            a { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 10px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🏭 Metallurg App</h1>
+            <p>Система управления производством</p>
+            
+            <h3>Доступы:</h3>
+            <a href="https://ваш-фронтенд-домен.vercel.app" target="_blank">Открыть приложение</a>
+            
+            <h3>API Документация:</h3>
+            <a href="/api" target="_blank">API Endpoints</a>
+            <a href="/api/health" target="_blank">Статус сервера</a>
+            
+            <h3>Тестовые данные:</h3>
+            <p><strong>Логин:</strong> admin</p>
+            <p><strong>Пароль:</strong> 123456</p>
+        </div>
+    </body>
+    </html>
+  `);
 });
 
 
