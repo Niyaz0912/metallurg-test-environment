@@ -1,8 +1,11 @@
 [build]
-command = "cd server && npm install"
+buildCommand = "npm run build"
 
-[deploy]
-startCommand = "cd server && npm start"
+[deploy] 
+startCommand = "npm run start"
 
-[deploy.environment]
-NODE_ENV = "production"
+[build.environment]
+NODE_VERSION = "22.15.0"
+
+# Деплой
+railway up
