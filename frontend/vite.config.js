@@ -1,15 +1,13 @@
-<reference types="vitest" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
   
-  // ✅ ДОБАВИТЬ: Настройки сборки для production
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: false, // Отключаем sourcemap для production
+    sourcemap: false,
     minify: 'esbuild',
     rollupOptions: {
       output: {
@@ -31,7 +29,6 @@ export default defineConfig({
     }
   },
   
-  // ✅ ДОБАВИТЬ: Настройки preview для тестирования build
   preview: {
     port: 4173,
     proxy: {
@@ -41,12 +38,5 @@ export default defineConfig({
         secure: false
       }
     }
-  },
-  
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: ['./src/setupTests.ts'],
-  },
+  }
 })
-
