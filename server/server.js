@@ -22,33 +22,91 @@ if (!fs.existsSync(uploadsDir)) {
   console.log('📁 Created uploads directory');
 }
 
-// ✅ ОБНОВЛЕННАЯ НАСТРОЙКА CORS для production и development
+// ✅ ИСПРАВЛЕННАЯ НАСТРОЙКА CORS с поддержкой localhost в production
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
+  origin: function (origin, callback) {
+    // Разрешить запросы без origin (мобильные приложения, Postman)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = process.env.NODE_ENV === 'production' 
+      ? [
+          process.env.FRONTEND_URL || 'https://metallurg-test-environment-production.up.railway.app',
+          'https://metallurg-test-environment-production.up.railway.app',
+          // ✅ ДОБАВЛЕНО: localhost для разработки с production сервером
+          'http://localhost:3001',
+          'http://localhost:5173',
+          'http://localhost:3000'
+        ]
+      : [
+          'http://localhost:5173',   // Веб-версия (Vite)
+          'http://localhost:3000',   // Веб-версия (Create React App)
+          'http://localhost:3001', 
+          'http://localhost:8081',   // Expo Metro Bundler
+          'http://localhost:19000',  // Expo
+          'http://localhost:19002',  // Expo
+          'http://192.168.1.180:8081', // Мобильное устройство (Expo Metro Bundler)
+          'http://192.168.1.180:19000', // Мобильное устройство (Expo)
+          'http://192.168.1.180:19002', // Мобильное устройство (Expo)
+          'http://10.0.2.2:8081',    // Android эмулятор (Metro Bundler)
+          'http://10.0.2.2:19000',   // Android эмулятор (Expo)
+          'http://10.0.2.2:19002',   // Android эмулятор (Expo)
+          'http://localhost',        // Общий localhost
+          'capacitor://localhost',   // Capacitor
+          'ionic://localhost'        // Ionic
+        ];
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log(`❌ CORS блокировка origin: ${origin}`);
+      callback(null, true); // Временно разрешить все для отладки
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 200
+}));
+
+// ✅ ДОБАВЛЕНО: Явная поддержка preflight запросов
+app.options('/*splat', cors());
+
+// ✅ ДОБАВЛЕНО: Дополнительные CORS заголовки для надежности
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  const allowedOrigins = process.env.NODE_ENV === 'production' 
     ? [
         process.env.FRONTEND_URL || 'https://metallurg-test-environment-production.up.railway.app',
-        'https://metallurg-test-environment-production.up.railway.app'
+        'https://metallurg-test-environment-production.up.railway.app',
+        'http://localhost:3001',
+        'http://localhost:5173',
+        'http://localhost:3000'
       ]
     : [
-        'http://localhost:5173',   // Веб-версия (Vite)
-        'http://localhost:3000',   // Веб-версия (Create React App)
-        'http://localhost:8081',   // Expo Metro Bundler
-        'http://localhost:19000',  // Expo
-        'http://localhost:19002',  // Expo
-        'http://192.168.1.180:8081', // Мобильное устройство (Expo Metro Bundler)
-        'http://192.168.1.180:19000', // Мобильное устройство (Expo)
-        'http://192.168.1.180:19002', // Мобильное устройство (Expo)
-        'http://10.0.2.2:8081',    // Android эмулятор (Metro Bundler)
-        'http://10.0.2.2:19000',   // Android эмулятор (Expo)
-        'http://10.0.2.2:19002',   // Android эмулятор (Expo)
-        'http://localhost',        // Общий localhost
-        'capacitor://localhost',   // Capacitor
-        'ionic://localhost'        // Ionic
-      ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:8081'
+      ];
+  
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
 // Middleware для парсинга данных
 app.use(express.json({ limit: '10mb' }));
@@ -110,7 +168,7 @@ const taskRoutes = require('./tasks/taskRoutes');
 const techCardRoutes = require('./techCards/techCardRoutes');
 const productionPlanRoutes = require('./productionPlans/productionPlanRoutes');
 
-// Регистрируем API роуты
+// ✅ ВАЖНО: API роуты должны быть зарегистрированы ДО статических файлов и catch-all роута
 app.use('/api/departments', departmentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/assignments', assignmentRoutes);
@@ -172,7 +230,7 @@ app.get('/api', (req, res) => {
   });
 });
 
-// ✅ НОВОЕ: Обслуживание статических файлов React приложения
+// ✅ Frontend статические файлы (ПОСЛЕ API роутов)
 const frontendPath = path.join(__dirname, '../frontend/dist');
 
 // Проверяем, существует ли папка с build
@@ -184,8 +242,8 @@ if (fs.existsSync(frontendPath)) {
   console.log('📝 Run "cd frontend && npm run build" to create the build');
 }
 
-// Обработка 404 для API маршрутов
-app.use('/api/*', (req, res) => {
+// ✅ 404 для API маршрутов (ПОСЛЕ всех API роутов, но ДО catch-all)
+app.use('/api', (req, res) => {
   if (process.env.NODE_ENV !== 'test') {
     console.log(`🔍 API Route not found: ${req.method} ${req.path}`);
   }
@@ -203,15 +261,13 @@ app.use('/api/*', (req, res) => {
   });
 });
 
-// ✅ ИСПРАВЛЕНО: Только catch-all handler для React Router (SPA routing)
-// ❌ УДАЛЕН проблемный app.get('/', ...) роут
-app.get('*', (req, res) => {
+// ✅ Catch-all handler для React Router (САМЫЙ ПОСЛЕДНИЙ)
+app.get(/.*/, (req, res) => {
   const frontendIndexPath = path.join(frontendPath, 'index.html');
   
   if (fs.existsSync(frontendIndexPath)) {
     res.sendFile(frontendIndexPath);
   } else {
-    // Fallback если нет build фронтенда
     res.status(404).json({ 
       error: 'Frontend not built', 
       message: 'Run: cd frontend && npm run build',
