@@ -1,4 +1,6 @@
+if (process.env.NODE_ENV !== 'production') {
 require('dotenv').config();
+}
 
 // Проверка обязательных переменных окружения
 if (!process.env.JWT_SECRET) {
