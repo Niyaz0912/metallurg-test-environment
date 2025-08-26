@@ -1,6 +1,5 @@
 # Node.js
 node_modules/
-dist/
 out/
 *.tsbuildinfo
 
@@ -65,8 +64,7 @@ database.db
 # 🆕 Производственные сборки
 /build
 /public/build
-frontend/dist/
-frontend/build/
+
 
 # 🆕 Конфигурационные файлы с секретами
 config/database.json
