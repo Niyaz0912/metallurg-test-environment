@@ -1,3 +1,29 @@
+// ✅ ФИКС ДЛЯ RAILWAY - Правильная обработка PORT
+const PORT = (() => {
+  let port = process.env.PORT;
+  
+  // Если PORT не установлен, используем 3001
+  if (!port) return 3001;
+  
+  // Если PORT это строка, преобразуем в число
+  if (typeof port === 'string') {
+    port = parseInt(port, 10);
+  }
+  
+  // Проверяем валидность порта
+  if (isNaN(port) || port < 0 || port > 65535) {
+    console.warn('⚠️ Invalid PORT, using default 3001');
+    return 3001;
+  }
+  
+  return port;
+})();
+
+// ✅ Загрузка .env в development
+if (process.env.NODE_ENV !== 'production') {
+  const path = require('path');
+  require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+}
 
 // Проверка обязательных переменных окружения
 if (!process.env.JWT_SECRET) {
@@ -7,6 +33,7 @@ if (!process.env.JWT_SECRET) {
 
 console.log(`🚀 Starting server on port ${PORT}`);
 console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`🔧 PORT value: ${process.env.PORT} (processed as: ${PORT})`);
 
 const express = require('express');
 const cors = require('cors');
@@ -15,7 +42,6 @@ const fs = require('fs');
 const db = require('./models');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
 
 // Создание папки uploads если её нет
 const uploadsDir = path.join(__dirname, 'uploads');
