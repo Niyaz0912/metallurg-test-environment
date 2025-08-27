@@ -1,5 +1,6 @@
+// ✅ Загрузка .env в development
 if (process.env.NODE_ENV !== 'production') {
-require('dotenv').config();
+  require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
 }
 
 // Проверка обязательных переменных окружения
@@ -24,44 +25,59 @@ if (!fs.existsSync(uploadsDir)) {
   console.log('📁 Created uploads directory');
 }
 
-// ✅ ИСПРАВЛЕННАЯ НАСТРОЙКА CORS с поддержкой localhost в production
+// ✅ УПРОЩЕННАЯ И УНИВЕРСАЛЬНАЯ НАСТРОЙКА CORS
+const isProduction = process.env.NODE_ENV === 'production';
+const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_NAME;
+
+// Определяем допустимые origins
+const getAllowedOrigins = () => {
+  if (isProduction) {
+    return [
+      process.env.FRONTEND_URL,
+      `https://${process.env.RAILWAY_PROJECT_NAME || 'metallurg'}.up.railway.app`,
+      'https://metallurg-test-environment-production.up.railway.app',
+      'http://localhost:3001', // для локального тестирования production
+      'http://localhost:5173'
+    ].filter(Boolean);
+  } else {
+    return [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:8081',
+      'http://localhost:19000',
+      'http://localhost:19002',
+      'http://192.168.1.180:8081',
+      'http://192.168.1.180:19000',
+      'http://10.0.2.2:8081',
+      'capacitor://localhost',
+      'ionic://localhost'
+    ];
+  }
+};
+
 app.use(cors({
   origin: function (origin, callback) {
     // Разрешить запросы без origin (мобильные приложения, Postman)
     if (!origin) return callback(null, true);
     
-    const allowedOrigins = process.env.NODE_ENV === 'production' 
-      ? [
-          process.env.FRONTEND_URL || 'https://metallurg-test-environment-production.up.railway.app',
-          'https://metallurg-test-environment-production.up.railway.app',
-          // ✅ ДОБАВЛЕНО: localhost для разработки с production сервером
-          'http://localhost:3001',
-          'http://localhost:5173',
-          'http://localhost:3000'
-        ]
-      : [
-          'http://localhost:5173',   // Веб-версия (Vite)
-          'http://localhost:3000',   // Веб-версия (Create React App)
-          'http://localhost:3001', 
-          'http://localhost:8081',   // Expo Metro Bundler
-          'http://localhost:19000',  // Expo
-          'http://localhost:19002',  // Expo
-          'http://192.168.1.180:8081', // Мобильное устройство (Expo Metro Bundler)
-          'http://192.168.1.180:19000', // Мобильное устройство (Expo)
-          'http://192.168.1.180:19002', // Мобильное устройство (Expo)
-          'http://10.0.2.2:8081',    // Android эмулятор (Metro Bundler)
-          'http://10.0.2.2:19000',   // Android эмулятор (Expo)
-          'http://10.0.2.2:19002',   // Android эмулятор (Expo)
-          'http://localhost',        // Общий localhost
-          'capacitor://localhost',   // Capacitor
-          'ionic://localhost'        // Ionic
-        ];
+    const allowedOrigins = getAllowedOrigins();
     
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.log(`❌ CORS блокировка origin: ${origin}`);
-      callback(null, true); // Временно разрешить все для отладки
+      // ✅ На Railway в production разрешаем все origins для удобства
+      if (isRailway && isProduction) {
+        console.log(`⚠️ CORS: Разрешен неизвестный origin на Railway: ${origin}`);
+        callback(null, true);
+      } else if (!isProduction) {
+        // В development тоже разрешаем для удобства отладки
+        console.log(`⚠️ CORS: Разрешен в development: ${origin}`);
+        callback(null, true);
+      } else {
+        console.log(`❌ CORS блокировка origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -71,88 +87,37 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-// ✅ ДОБАВЛЕНО: Явная поддержка preflight запросов
-app.options('/*splat', cors());
-
-// ✅ ДОБАВЛЕНО: Дополнительные CORS заголовки для надежности
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  const allowedOrigins = process.env.NODE_ENV === 'production' 
-    ? [
-        process.env.FRONTEND_URL || 'https://metallurg-test-environment-production.up.railway.app',
-        'https://metallurg-test-environment-production.up.railway.app',
-        'http://localhost:3001',
-        'http://localhost:5173',
-        'http://localhost:3000'
-      ]
-    : [
-        'http://localhost:5173',
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'http://localhost:8081'
-      ];
-  
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
-  next();
-});
+// ✅ Обработка preflight запросов
+app.options('*', cors());
 
 // Middleware для парсинга данных
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ✅ ИСПРАВЛЕНИЕ: Статические файлы для загруженных файлов
+// ✅ Статические файлы для загруженных файлов
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/files/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/files', express.static(path.join(__dirname, 'uploads')));
 
-// ✅ УЛУЧШЕННОЕ ЛОГИРОВАНИЕ ЗАПРОСОВ
+// ✅ ОПТИМИЗИРОВАННОЕ ЛОГИРОВАНИЕ
 app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  const userAgent = req.get('User-Agent') || 'Unknown';
-  const ip = req.ip || req.connection.remoteAddress || 'Unknown IP';
+  const isProduction = process.env.NODE_ENV === 'production';
   
-  // Отключаем логирование для тестов
-  if (process.env.NODE_ENV !== 'test') {
+  if (!isProduction || process.env.DEBUG_REQUESTS === 'true') {
+    const timestamp = new Date().toISOString();
     console.log(`[${timestamp}] ${req.method} ${req.url}`);
     
-    // Детальное логирование в режиме разработки
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`  📍 IP: ${ip}`);
-      console.log(`  🔑 Headers: ${JSON.stringify(req.headers, null, 2)}`);
-      
-      if (req.body && Object.keys(req.body).length > 0) {
-        const sanitizedBody = { ...req.body };
-        if (sanitizedBody.password) sanitizedBody.password = '[HIDDEN]';
-        if (sanitizedBody.token) sanitizedBody.token = '[HIDDEN]';
-        if (sanitizedBody.refreshToken) sanitizedBody.refreshToken = '[HIDDEN]';
-        
-        console.log(`  📦 Body: ${JSON.stringify(sanitizedBody, null, 2)}`);
-      }
-      
-      if (req.query && Object.keys(req.query).length > 0) {
-        console.log(`  🔍 Query: ${JSON.stringify(req.query, null, 2)}`);
-      }
+    if (!isProduction && req.body && Object.keys(req.body).length > 0) {
+      const sanitizedBody = { ...req.body };
+      if (sanitizedBody.password) sanitizedBody.password = '[HIDDEN]';
+      if (sanitizedBody.token) sanitizedBody.token = '[HIDDEN]';
+      console.log(`  📦 Body:`, sanitizedBody);
     }
   }
   
   const startTime = Date.now();
-  
   res.on('finish', () => {
-    if (process.env.NODE_ENV !== 'test') {
+    if (!isProduction || process.env.DEBUG_REQUESTS === 'true') {
       const duration = Date.now() - startTime;
       const statusColor = res.statusCode >= 400 ? '🔴' : res.statusCode >= 300 ? '🟡' : '🟢';
       console.log(`  ${statusColor} ${res.statusCode} - ${duration}ms`);
@@ -170,7 +135,7 @@ const taskRoutes = require('./tasks/taskRoutes');
 const techCardRoutes = require('./techCards/techCardRoutes');
 const productionPlanRoutes = require('./productionPlans/productionPlanRoutes');
 
-// ✅ ВАЖНО: API роуты должны быть зарегистрированы ДО статических файлов и catch-all роута
+// ✅ API роуты
 app.use('/api/departments', departmentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/assignments', assignmentRoutes);
@@ -178,15 +143,21 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/techcards', techCardRoutes);
 app.use('/api/productionPlans', productionPlanRoutes);
 
-// Тестовые API маршруты
+// Health check для Railway
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
+    environment: process.env.NODE_ENV || 'development',
+    railway: !!isRailway,
     database: db.sequelize.config.database || 'sqlite-memory',
     time: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    uptime: process.uptime()
   });
+});
+
+// ✅ Railway-специфичный health check
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
 });
 
 app.get('/api/files/test', (req, res) => {
@@ -198,30 +169,25 @@ app.get('/api/files/test', (req, res) => {
       message: 'Files API working',
       uploadsPath: uploadsPath,
       filesCount: files.length,
-      files: files.slice(0, 10),
-      availableRoutes: [
-        '/uploads/* - Direct file access',
-        '/api/files/uploads/* - API file access',
-        '/api/files/* - Alternative API file access'
-      ]
+      files: files.slice(0, 5)
     });
   } catch (error) {
     res.status(500).json({
       error: 'Cannot read uploads directory',
-      path: uploadsPath,
       message: error.message
     });
   }
 });
 
-// Маршрут для получения информации об API
+// API информация
 app.get('/api', (req, res) => {
   res.json({
     message: 'Metallurg API Server',
     version: '1.0.0',
+    railway: !!isRailway,
     endpoints: [
       '/api/health - Server health check',
-      '/api/files/test - Files API test',
+      '/health - Railway health check',
       '/api/departments - Department management',
       '/api/users - User management and authentication',
       '/api/assignments - Shift assignments management',
@@ -232,266 +198,147 @@ app.get('/api', (req, res) => {
   });
 });
 
-// ✅ Frontend статические файлы (ПОСЛЕ API роутов)
-const frontendPath = path.join(__dirname, '../frontend/dist');
+// ✅ Frontend статические файлы
+const frontendPath = path.join(__dirname, '../../frontend/dist');
 
-// Проверяем, существует ли папка с build
 if (fs.existsSync(frontendPath)) {
   console.log('🎨 Frontend build found, serving React app');
   app.use(express.static(frontendPath));
 } else {
-  console.log('⚠️  Frontend build not found at:', frontendPath);
-  console.log('📝 Run "cd frontend && npm run build" to create the build');
+  console.log('⚠️ Frontend build not found');
+  if (!isRailway) {
+    console.log('📝 Run "cd frontend && npm run build" to create the build');
+  }
 }
 
-// ✅ 404 для API маршрутов (ПОСЛЕ всех API роутов, но ДО catch-all)
+// ✅ 404 для API маршрутов
 app.use('/api', (req, res) => {
-  if (process.env.NODE_ENV !== 'test') {
-    console.log(`🔍 API Route not found: ${req.method} ${req.path}`);
-  }
   res.status(404).json({
     error: 'API Route not found',
     path: req.path,
-    method: req.method,
-    ...(req.path.includes('/files/') && {
-      hint: 'Try these file routes:',
-      alternatives: [
-        `/uploads${req.path.replace('/api/files/uploads', '')}`,
-        `/api/files${req.path.replace('/api/files/uploads', '')}`
-      ]
-    })
+    method: req.method
   });
 });
 
-// ✅ Catch-all handler для React Router (САМЫЙ ПОСЛЕДНИЙ)
-app.get(/.*/, (req, res) => {
+// ✅ Catch-all handler для React Router
+app.get('*', (req, res) => {
   const frontendIndexPath = path.join(frontendPath, 'index.html');
   
   if (fs.existsSync(frontendIndexPath)) {
     res.sendFile(frontendIndexPath);
   } else {
     res.status(404).json({ 
-      error: 'Frontend not built', 
-      message: 'Run: cd frontend && npm run build',
-      path: frontendIndexPath,
-      exists: false
+      error: 'Frontend not built',
+      railway: !!isRailway,
+      message: isRailway ? 'Frontend build missing in deployment' : 'Run: cd frontend && npm run build'
     });
   }
 });
 
-// ✅ УЛУЧШЕННАЯ ОБРАБОТКА ОШИБОК
+// ✅ УПРОЩЕННАЯ ОБРАБОТКА ОШИБОК
 app.use((err, req, res, next) => {
-  const timestamp = new Date().toISOString();
-  const errorId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+  const errorId = Date.now().toString(36);
+  const isProduction = process.env.NODE_ENV === 'production';
   
-  if (process.env.NODE_ENV !== 'test') {
-    console.error('\n' + '='.repeat(80));
-    console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА СЕРВЕРА');
-    console.error('='.repeat(80));
-    console.error(`⏰ Время: ${timestamp}`);
-    console.error(`🆔 ID ошибки: ${errorId}`);
-    console.error(`🌐 URL: ${req.method} ${req.url}`);
-    console.error(`📍 IP: ${req.ip || req.connection.remoteAddress || 'Unknown'}`);
-    console.error(`👤 User-Agent: ${req.get('User-Agent') || 'Unknown'}`);
-    
-    const sanitizedHeaders = { ...req.headers };
-    if (sanitizedHeaders.authorization) sanitizedHeaders.authorization = '[HIDDEN]';
-    if (sanitizedHeaders.cookie) sanitizedHeaders.cookie = '[HIDDEN]';
-    console.error(`📋 Headers: ${JSON.stringify(sanitizedHeaders, null, 2)}`);
-    
-    if (req.body && Object.keys(req.body).length > 0) {
-      const sanitizedBody = { ...req.body };
-      if (sanitizedBody.password) sanitizedBody.password = '[HIDDEN]';
-      if (sanitizedBody.token) sanitizedBody.token = '[HIDDEN]';
-      console.error(`📦 Request Body: ${JSON.stringify(sanitizedBody, null, 2)}`);
-    }
-    
-    console.error(`❌ Ошибка: ${err.name || 'Unknown Error'}`);
-    console.error(`💬 Сообщение: ${err.message || 'No message'}`);
-    console.error(`📊 Код статуса: ${err.statusCode || err.status || 500}`);
-    
-    if (err.stack) {
-      console.error(`📚 Stack Trace:`);
-      console.error(err.stack);
-    }
-    
-    if (err.code) {
-      console.error(`🔢 Error Code: ${err.code}`);
-    }
-    
-    if (err.sqlMessage) {
-      console.error(`🗄️  SQL Error: ${err.sqlMessage}`);
-    }
-    
-    if (err.sql) {
-      console.error(`📝 SQL Query: ${err.sql}`);
-    }
-    
-    console.error('='.repeat(80));
-    console.error('\n');
+  if (!isProduction) {
+    console.error('🚨 Ошибка сервера:', err.message);
+    console.error('Stack:', err.stack);
+  } else {
+    console.error(`🚨 Ошибка [${errorId}]:`, err.message);
   }
 
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(413).json({
       error: 'Файл слишком большой',
-      message: 'Максимальный размер файла: 10MB',
-      errorId: errorId
-    });
-  }
-
-  if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-    return res.status(400).json({
-      error: 'Неверный тип файла',
-      message: 'Проверьте формат загружаемого файла',
-      errorId: errorId
+      message: 'Максимальный размер файла: 10MB'
     });
   }
 
   if (err.name === 'SequelizeValidationError') {
     return res.status(400).json({
       error: 'Ошибка валидации данных',
-      message: process.env.NODE_ENV === 'development' ? err.message : 'Неверные данные',
-      errorId: errorId
+      message: isProduction ? 'Неверные данные' : err.message
     });
   }
 
-  if (err.name === 'SequelizeUniqueConstraintError') {
-    return res.status(409).json({
-      error: 'Конфликт данных',
-      message: 'Запись с такими данными уже существует',
-      errorId: errorId
-    });
-  }
-
-  if (err.name === 'JsonWebTokenError') {
+  if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
     return res.status(401).json({
       error: 'Ошибка авторизации',
-      message: 'Неверный токен',
-      errorId: errorId
-    });
-  }
-
-  if (err.name === 'TokenExpiredError') {
-    return res.status(401).json({
-      error: 'Токен истёк',
-      message: 'Необходимо войти в систему заново',
-      errorId: errorId
+      message: 'Необходимо войти в систему заново'
     });
   }
 
   const statusCode = err.statusCode || err.status || 500;
-  const isProduction = process.env.NODE_ENV === 'production';
   
   res.status(statusCode).json({
     error: isProduction ? 'Internal Server Error' : err.name || 'Server Error',
-    message: isProduction ? 'Что-то пошло не так. Попробуйте позже.' : err.message || 'Unknown error',
-    errorId: errorId,
-    ...(process.env.NODE_ENV === 'development' && {
-      stack: err.stack,
-      details: {
-        url: req.url,
-        method: req.method,
-        timestamp: timestamp
-      }
-    })
+    message: isProduction ? 'Что-то пошло не так. Попробуйте позже.' : err.message,
+    ...(process.env.DEBUG === 'true' && { errorId })
   });
 });
 
 async function startServer() {
   try {
+    // ✅ Подключение к базе данных
     await db.sequelize.authenticate();
     console.log('✅ Database connection established');
 
-    if (process.env.NODE_ENV === 'development') {
-      try {
-        console.log('🔄 Database sync disabled (preventing key duplication)');
-        console.log('🔄 Database models synced');
-      } catch (syncError) {
-        console.warn('⚠️  Database sync warning:', syncError.message);
-      }
+    // ✅ Синхронизация только в development
+    if (!isProduction) {
+      console.log('🔄 Development mode: Database sync disabled');
     }
 
-    console.log('🔗 API routes registration completed');
-
+    // ✅ Запуск сервера
     const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`💾 Database: ${db.sequelize.config.database || 'sqlite-memory'}`);
-      console.log(`📁 Uploads directory: ${uploadsDir}`);
+      console.log(`🌐 Railway: ${isRailway ? 'Yes' : 'No'}`);
       
-      console.log(`📄 File routes:`);
-      console.log(`   Direct: http://localhost:${PORT}/uploads/filename.pdf`);
-      console.log(`   API: http://localhost:${PORT}/api/files/uploads/filename.pdf`);
-      console.log(`   Alt: http://localhost:${PORT}/api/files/filename.pdf`);
-      console.log(`   Test: http://localhost:${PORT}/api/files/test`);
-      
-      // ✅ НОВОЕ: Информация о фронтенде
-      if (fs.existsSync(frontendPath)) {
-        console.log(`🎨 Frontend: http://localhost:${PORT}/`);
-        console.log(`📱 React app will be served for all non-API routes`);
+      if (isRailway) {
+        console.log(`🔗 Railway URL: https://${process.env.RAILWAY_PROJECT_NAME || 'app'}.up.railway.app`);
       } else {
-        console.log(`⚠️  Frontend build not found. Run "cd frontend && npm run build"`);
+        console.log(`🏠 Local URL: http://localhost:${PORT}`);
       }
+      
+      console.log(`🔧 CORS allowed origins:`, getAllowedOrigins());
     });
 
+    // ✅ Graceful shutdown
     const gracefulShutdown = (signal) => {
-      console.log(`\n🛑 ${signal} received. Starting graceful shutdown...`);
-
+      console.log(`🛑 ${signal} received. Shutting down gracefully...`);
+      
       server.close(async () => {
-        console.log('📡 HTTP server closed');
-
         try {
           await db.sequelize.close();
           console.log('💾 Database connection closed');
         } catch (error) {
-          console.error('❌ Error closing database:', error);
+          console.error('❌ Error closing database:', error.message);
         }
-
-        console.log('✅ Graceful shutdown completed');
         process.exit(0);
       });
 
       setTimeout(() => {
-        console.error('❌ Forced shutdown after timeout');
+        console.error('❌ Forced shutdown');
         process.exit(1);
-      }, 30000);
+      }, 10000);
     };
 
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
   } catch (err) {
-    console.error('❌ Server startup failed:', err);
-    console.error('Stack trace:', err.stack);
+    console.error('❌ Server startup failed:', err.message);
     process.exit(1);
   }
 }
 
+// ✅ ОБРАБОТКА НЕОБРАБОТАННЫХ ОШИБОК
 process.on('unhandledRejection', (reason, promise) => {
-  if (process.env.NODE_ENV !== 'test') {
-    console.error('\n' + '!'.repeat(60));
-    console.error('🚨 UNHANDLED PROMISE REJECTION');
-    console.error('!'.repeat(60));
-    console.error('⏰ Time:', new Date().toISOString());
-    console.error('🎯 Promise:', promise);
-    console.error('❌ Reason:', reason);
-    console.error('📚 Stack:', reason?.stack || 'No stack trace');
-    console.error('!'.repeat(60));
-    console.error('\n');
-  }
+  console.error('🚨 Unhandled Promise Rejection:', reason?.message || reason);
 });
 
 process.on('uncaughtException', (error) => {
-  if (process.env.NODE_ENV !== 'test') {
-    console.error('\n' + '!'.repeat(60));
-    console.error('🚨 UNCAUGHT EXCEPTION');
-    console.error('!'.repeat(60));
-    console.error('⏰ Time:', new Date().toISOString());
-    console.error('❌ Error:', error.message);
-    console.error('📚 Stack:', error.stack);
-    console.error('!'.repeat(60));
-    console.error('\n');
-  }
+  console.error('🚨 Uncaught Exception:', error.message);
   process.exit(1);
 });
 
@@ -500,4 +347,3 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 module.exports = app;
-
