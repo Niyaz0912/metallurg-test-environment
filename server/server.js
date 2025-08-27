@@ -1,6 +1,8 @@
 // ✅ Загрузка .env в development
 if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
+  const path = require('path');
+  // Правильный путь к .env файлу в корне проекта
+  require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 }
 
 // Проверка обязательных переменных окружения
@@ -8,6 +10,7 @@ if (!process.env.JWT_SECRET) {
   console.error('❌ Fatal error: JWT_SECRET is not defined in .env file');
   process.exit(1);
 }
+
 
 const express = require('express');
 const cors = require('cors');
