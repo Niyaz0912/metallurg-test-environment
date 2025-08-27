@@ -2,7 +2,7 @@
 
 module.exports = {
   async up(queryInterface) {
-    await queryInterface.bulkInsert('tech_cards', [
+    const techCards = [
       {
         id: 1,
         customer: 'ООО Заказчик 1',
@@ -18,9 +18,7 @@ module.exports = {
         plannedEndDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
         actualEndDate: null,
         notes: 'Первая производственная партия',
-        createdById: 1,                // admin
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdById: 1,
       },
       {
         id: 2,
@@ -37,9 +35,7 @@ module.exports = {
         plannedEndDate: new Date(new Date().setDate(new Date().getDate() + 45)),
         actualEndDate: null,
         notes: null,
-        createdById: 2,                // master1
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdById: 2,
       },
       {
         id: 3,
@@ -57,15 +53,65 @@ module.exports = {
         actualEndDate: new Date(new Date().setDate(new Date().getDate() - 10)),
         notes: 'Проект завершён',
         createdById: 1,
-        createdAt: new Date(),
-        updatedAt: new Date()
       }
-    ]);
+    ];
+
+    // 1) Обновляем существующие техкарты по order (без удаления - не ломает FK)
+    for (const tc of techCards) {
+      await queryInterface.bulkUpdate(
+        'tech_cards',
+        {
+          customer: tc.customer,
+          productName: tc.productName,
+          partNumber: tc.partNumber,
+          quantity: tc.quantity,
+          pdfUrl: tc.pdfUrl,
+          pdfFileSize: tc.pdfFileSize,
+          totalProducedQuantity: tc.totalProducedQuantity,
+          status: tc.status,
+          priority: tc.priority,
+          plannedEndDate: tc.plannedEndDate,
+          actualEndDate: tc.actualEndDate,
+          notes: tc.notes,
+          createdById: tc.createdById,
+          updatedAt: new Date(),
+        },
+        { order: tc.order }
+      );
+    }
+
+    // 2) Вставляем отсутствующие, игнорируя дубликаты
+    const rowsToInsert = techCards.map(tc => ({
+      id: tc.id,
+      customer: tc.customer,
+      order: tc.order,
+      productName: tc.productName,
+      partNumber: tc.partNumber,
+      quantity: tc.quantity,
+      pdfUrl: tc.pdfUrl,
+      pdfFileSize: tc.pdfFileSize,
+      totalProducedQuantity: tc.totalProducedQuantity,
+      status: tc.status,
+      priority: tc.priority,
+      plannedEndDate: tc.plannedEndDate,
+      actualEndDate: tc.actualEndDate,
+      notes: tc.notes,
+      createdById: tc.createdById,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    await queryInterface.bulkInsert('tech_cards', rowsToInsert, {
+      ignoreDuplicates: true,
+      validate: false,
+    });
   },
 
   async down(queryInterface) {
+    // Мягкая очистка по order (только если нет FK-ссылок)
     await queryInterface.bulkDelete('tech_cards', {
       order: ['ORD-001', 'ORD-002', 'ORD-003']
     });
   }
 };
+
