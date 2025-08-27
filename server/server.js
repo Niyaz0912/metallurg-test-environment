@@ -1,9 +1,3 @@
-// ✅ Загрузка .env в development
-if (process.env.NODE_ENV !== 'production') {
-  const path = require('path');
-  // Правильный путь к .env файлу в корне проекта
-  require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
-}
 
 // Проверка обязательных переменных окружения
 if (!process.env.JWT_SECRET) {
@@ -11,6 +5,8 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
+console.log(`🚀 Starting server on port ${PORT}`);
+console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
 
 const express = require('express');
 const cors = require('cors');
@@ -293,18 +289,18 @@ async function startServer() {
 
     // ✅ Запуск сервера
     const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🌐 Railway: ${isRailway ? 'Yes' : 'No'}`);
-      
-      if (isRailway) {
-        console.log(`🔗 Railway URL: https://${process.env.RAILWAY_PROJECT_NAME || 'app'}.up.railway.app`);
-      } else {
-        console.log(`🏠 Local URL: http://localhost:${PORT}`);
-      }
-      
-      console.log(`🔧 CORS allowed origins:`, getAllowedOrigins());
-    });
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_NAME;
+  console.log(`🌐 Railway: ${isRailway ? 'Yes' : 'No'}`);
+  
+  if (isRailway) {
+    console.log(`🔗 Railway URL: https://${process.env.RAILWAY_PROJECT_NAME || 'app'}.up.railway.app`);
+  } else {
+    console.log(`🏠 Local URL: http://localhost:${PORT}`);
+  }
+});
 
     // ✅ Graceful shutdown
     const gracefulShutdown = (signal) => {

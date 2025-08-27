@@ -5,7 +5,7 @@
   "description": "Metallurgy test environment with React frontend and Express backend",
   "scripts": {
     "build": "cd frontend && npm install && npm run build && cd ../server && npm install",
-    "start": "node server/server.js",
+    "start": "cd server && npm start",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd server && npm run dev",
@@ -33,7 +33,9 @@
     "clean:all": "npm run clean && npx rimraf node_modules",
     "setup": "npm run install:deps",
     "build:production": "cd frontend && npm install && npm run build && cd ../server && npm install",
-    "start:production": "node server/index.js"
+    "start:production": "cd server && npm start",
+    "railway:build": "npm run build:production",
+    "railway:start": "cd server && npm start"
   },
   "workspaces": [
     "frontend",
