@@ -10,4 +10,4 @@ cmds = [
 ]
 
 [start]
-cmd = "cd server && npm start"
+cmd = "cd server && npx sequelize-cli db:migrate && npm start"
