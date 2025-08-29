@@ -31,27 +31,9 @@ if (env === 'test') {
   });
 } else if (env === 'production') {
   console.log('🚀 PRODUCTION MODE - Using Railway MySQL');
-  
-  // ПРИОРИТЕТ 1: Используем DATABASE_URL (рекомендуемый способ Railway)
-  if (process.env.DATABASE_URL) {
-    console.log('✅ Using DATABASE_URL connection');
-    sequelize = new Sequelize(process.env.DATABASE_URL, {
-      dialect: 'mysql',
-      logging: false,
-      pool: {
-        max: 5,
-        min: 0,
-        acquire: 30000,
-        idle: 10000
-      },
-      dialectOptions: {
-        connectTimeout: 60000,
-      }
-    });
-  } 
-  // ПРИОРИТЕТ 2: Fallback на отдельные переменные
-  else if (process.env.MYSQLHOST && process.env.MYSQLDATABASE) {
-    console.log('⚠️ Using separate MySQL variables');
+
+  if (process.env.MYSQLHOST && process.env.MYSQLDATABASE && process.env.MYSQLUSER && process.env.MYSQLPASSWORD) {
+    console.log('✅ Using separate MySQL component variables for connection');
     sequelize = new Sequelize({
       database: process.env.MYSQLDATABASE,
       username: process.env.MYSQLUSER,
@@ -70,11 +52,10 @@ if (env === 'test') {
         connectTimeout: 60000,
       }
     });
-  } 
-  // ОШИБКА: Нет переменных для подключения
-  else {
-    console.error('❌ No database connection variables found!');
-    console.error('   Need either DATABASE_URL or MYSQL* variables');
+  } else {
+    console.error('❌ Critical database connection variables are missing!');
+    console.error('   Please ensure MYSQLHOST, MYSQLDATABASE, MYSQLUSER, and MYSQLPASSWORD are set in your environment.');
+    // В production не останавливаем приложение из-за БД, но оно не будет работать с БД
   }
 } else {
   console.log('⚠️ DEVELOPMENT MODE');
