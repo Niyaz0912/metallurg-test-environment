@@ -8,7 +8,7 @@ require('dotenv').config();
 // Получить всех пользователей (только для админа)
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await db.User.findAll({ 
+    const users = await db.User.findAll({
       attributes: { exclude: ['passwordHash'] },
       include: {
         model: db.Department,
@@ -46,7 +46,7 @@ exports.register = async (req, res) => {
 
     // ❌ ОТКЛЮЧЕНО: Хэширование пароля для тестовой среды
     // const passwordHash = await bcrypt.hash(password, 10);
-    
+
     // ✅ ТЕСТОВАЯ СРЕДА: Сохраняем пароль как есть
     const passwordHash = password; // простой текст для тестов
 
@@ -84,14 +84,14 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
-    
+
     // ✅ ДОБАВЛЕНА ПРОВЕРКА: Валидация входных данных
     if (!username || !password) {
       return res.status(401).json({ message: 'Неверный логин или пароль' });
     }
-    
+
     console.log('🔍 Попытка входа:', username);
-    
+
     // Используем scope 'withPassword' для получения пароля
     const user = await db.User.scope('withPassword').findOne({
       where: { username },
@@ -107,12 +107,13 @@ exports.login = async (req, res) => {
 
     const { passwordHash } = user;
     console.log('🔑 Пароль получен:', passwordHash ? 'ДА' : 'НЕТ');
-    
+
     // ❌ ОТКЛЮЧЕНО: Проверка пароля через bcrypt для продакшена
     /*
     let passwordValid = false;
-    
-    if (passwordHash && passwordHash.startsWith('$2b$')) {
+
+    if (passwordHash && passwordHash.startsWith('$2b
+)) {
       try {
         passwordValid = await bcrypt.compare(password, passwordHash);
         console.log('🔒 Результат bcrypt для', username, ':', passwordValid);
@@ -126,9 +127,22 @@ exports.login = async (req, res) => {
     }
     */
 
-    // ✅ ТЕСТОВАЯ СРЕДА: Простая проверка пароля
+    // ----------------------------------------------------------------
+    // ВАЖНО: Выберите один из двух режимов проверки пароля
+    // ----------------------------------------------------------------
+
+    // ✅ РЕЖИМ 1: ДЛЯ ТЕСТОВОЙ СРЕДЫ (простая сверка текста)
+    // Сейчас активен этот режим. Пароли в базе должны быть в виде простого текста.
     const passwordValid = password === passwordHash;
     console.log('🔑 Проверка пароля для', username, ':', passwordValid);
+
+    /*
+    // 🔒 РЕЖИМ 2: ДЛЯ ПРОДАКШЕНА (проверка хеша bcrypt)
+    // Чтобы включить, закомментируйте РЕЖИМ 1 и раскомментируйте этот блок.
+    // Также нужно раскомментировать `const bcrypt = require('bcrypt');` в начале файла.
+    const passwordValid = await bcrypt.compare(password, passwordHash);
+    console.log('🔒 Результат bcrypt для', username, ':', passwordValid);
+    */
 
     if (!passwordValid) {
       console.log('❌ Неверный пароль для:', username);
@@ -136,7 +150,7 @@ exports.login = async (req, res) => {
     }
 
     console.log('✅ Авторизация успешна для:', username);
-    
+
     // Генерация JWT токена
     const token = jwt.sign(
       { 
@@ -173,7 +187,7 @@ exports.login = async (req, res) => {
 exports.getMe = async (req, res) => {
   try {
     const userId = req.user.userId;
-    
+
     const user = await db.User.findByPk(userId, {
       include: [
         {

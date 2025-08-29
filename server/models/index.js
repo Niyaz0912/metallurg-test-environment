@@ -127,11 +127,13 @@ if (env !== 'test') {
         console.log('✅ All tables created successfully');
       }
       
+      /*
       // Синхронизация моделей в development
       if (env === 'development') {
-        await sequelize.sync({ alter: false });
+        await sequelize.sync({ alter: true });
         console.log('🔄 Database models synced');
       }
+      */
     } catch (error) {
       console.error('❌ Unable to connect to the database:', error.message);
       console.error('📚 Full error:', error);
