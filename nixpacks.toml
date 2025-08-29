@@ -5,5 +5,5 @@
 cmds = ["npm install --legacy-peer-deps", "npm run build"]
 
 [start]
-# Выводим значения ключевых переменных БД для отладки
-cmd = "node -e \"console.log(`MYSQLHOST='${process.env.MYSQLHOST}'`); console.log(`MYSQLPORT='${process.env.MYSQLPORT}'`); console.log(`MYSQLUSER='${process.env.MYSQLUSER}'`);\""
+# Самая простая команда для вывода всех переменных
+cmd = "env"
