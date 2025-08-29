@@ -1,3 +1,7 @@
+// ✅ Загрузка .env файла из папки server
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+
 // ✅ ФИКС ДЛЯ RAILWAY - Правильная обработка PORT
 const PORT = (() => {
   let port = process.env.PORT;
@@ -19,15 +23,14 @@ const PORT = (() => {
   return port;
 })();
 
-// ✅ Загрузка .env в development
-if (process.env.NODE_ENV !== 'production') {
-  const path = require('path');
-  require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
-}
+console.log('🔧 Server starting with PORT:', PORT);
 
 // Проверка обязательных переменных окружения
 if (!process.env.JWT_SECRET) {
-  console.error('❌ Fatal error: JWT_SECRET is not defined in .env file');
+  console.error('❌ Fatal error: JWT_SECRET is not defined');
+  console.log('🔍 Current JWT_SECRET:', process.env.JWT_SECRET);
+  console.log('📋 NODE_ENV:', process.env.NODE_ENV);
+  console.log('📋 PORT:', process.env.PORT);
   process.exit(1);
 }
 
@@ -37,7 +40,6 @@ console.log(`🔧 PORT value: ${process.env.PORT} (processed as: ${PORT})`);
 
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 const fs = require('fs');
 const db = require('./models');
 
@@ -112,8 +114,8 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-// ✅ Обработка preflight запросов
-app.options('*', cors());
+// ✅ ИСПРАВЛЕНИЕ: Обработка preflight запросов с именованным параметром
+app.options('*catchall', cors());
 
 // Middleware для парсинга данных
 app.use(express.json({ limit: '10mb' }));
@@ -237,7 +239,7 @@ if (fs.existsSync(frontendPath)) {
 }
 
 // ✅ 404 для API маршрутов
-app.use('/api', (req, res) => {
+app.use('/api/*catchall', (req, res) => {
   res.status(404).json({
     error: 'API Route not found',
     path: req.path,
@@ -245,8 +247,8 @@ app.use('/api', (req, res) => {
   });
 });
 
-// ✅ Catch-all handler для React Router
-app.get('*', (req, res) => {
+// ✅ ИСПРАВЛЕНИЕ: Catch-all handler для React Router с именованным параметром
+app.get('*catchall', (req, res) => {
   const frontendIndexPath = path.join(frontendPath, 'index.html');
   
   if (fs.existsSync(frontendIndexPath)) {
@@ -315,18 +317,18 @@ async function startServer() {
 
     // ✅ Запуск сервера
     const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  
-  const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_NAME;
-  console.log(`🌐 Railway: ${isRailway ? 'Yes' : 'No'}`);
-  
-  if (isRailway) {
-    console.log(`🔗 Railway URL: https://${process.env.RAILWAY_PROJECT_NAME || 'app'}.up.railway.app`);
-  } else {
-    console.log(`🏠 Local URL: http://localhost:${PORT}`);
-  }
-});
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      
+      const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_NAME;
+      console.log(`🌐 Railway: ${isRailway ? 'Yes' : 'No'}`);
+      
+      if (isRailway) {
+        console.log(`🔗 Railway URL: https://${process.env.RAILWAY_PROJECT_NAME || 'app'}.up.railway.app`);
+      } else {
+        console.log(`🏠 Local URL: http://localhost:${PORT}`);
+      }
+    });
 
     // ✅ Graceful shutdown
     const gracefulShutdown = (signal) => {

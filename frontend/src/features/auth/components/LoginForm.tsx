@@ -19,7 +19,10 @@ const LoginForm: React.FC<Props> = ({ onLogin }) => {
     try {
       console.log('🔄 Отправка логина...', { username, password });
       
-      const response = await fetch('/api/users/login', {
+      // Универсальный URL для API: использует переменную окружения в продакшене
+      // и относительный путь для прокси в разработке.
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/users/login`, {
 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
