@@ -1,13 +1,9 @@
-[phases.setup]
-cmds = [
-  "cd frontend && npm install",
-  "cd server && npm install"
-]
+# nixpacks.toml
 
 [phases.build]
-cmds = [
-  "cd frontend && npm run build"
-]
+# Устанавливаем все зависимости и собираем фронтенд
+cmds = ["npm install --legacy-peer-deps", "npm run build"]
 
 [start]
+# Временно выводим переменные окружения для отладки
 cmd = "echo '==== PRINTING ENV VARS FOR DEBUGGING ====' && env && echo '==== END OF ENV VARS ===='"
