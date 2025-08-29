@@ -5,5 +5,5 @@
 cmds = ["npm install --legacy-peer-deps", "npm run build"]
 
 [start]
-# Самая простая команда для вывода всех переменных
-cmd = "env"
+# Запускаем миграции и стартуем сервер
+cmd = "cd server && npx sequelize-cli db:migrate && npm start"
