@@ -5,5 +5,5 @@
 cmds = ["npm install --legacy-peer-deps", "npm run build"]
 
 [start]
-# Временно выводим переменные окружения для отладки
-cmd = "echo '==== PRINTING ENV VARS FOR DEBUGGING ====' && env && echo '==== END OF ENV VARS ===='"
+# Выводим значения ключевых переменных БД для отладки
+cmd = "node -e \"console.log(`MYSQLHOST='${process.env.MYSQLHOST}'`); console.log(`MYSQLPORT='${process.env.MYSQLPORT}'`); console.log(`MYSQLUSER='${process.env.MYSQLUSER}'`);\""
