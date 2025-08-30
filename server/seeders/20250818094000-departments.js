@@ -2,7 +2,10 @@
 
 module.exports = {
   up: async (queryInterface) => {
-    // Вставляем только существующие колонки
+    // Сначала очищаем таблицу
+    await queryInterface.bulkDelete('departments', null, {});
+
+    // Затем вставляем данные
     await queryInterface.bulkInsert(
       'departments',
       [

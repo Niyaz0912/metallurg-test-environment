@@ -4,6 +4,9 @@ module.exports = {
   async up(queryInterface) {
     console.log('🚀 Создаем сменные задания...');
     
+    // Сначала очищаем таблицу
+    await queryInterface.bulkDelete('assignments', null, {});
+
     // Вспомогательные даты
     const now = new Date();
     const tomorrow = new Date(now);
@@ -65,28 +68,6 @@ module.exports = {
       }
     ];
 
-    // Обновляем существующие задания по id (идемпотентность)
-    for (const assignment of assignments) {
-      await queryInterface.bulkUpdate(
-        'assignments',
-        {
-          operatorId: assignment.operatorId,
-          techCardId: assignment.techCardId,
-          shiftDate: assignment.shiftDate,
-          taskDescription: assignment.taskDescription,
-          machineNumber: assignment.machineNumber,
-          plannedQuantity: assignment.plannedQuantity,
-          actualQuantity: assignment.actualQuantity,
-          startedAt: assignment.startedAt,
-          completedAt: assignment.completedAt,
-          notes: assignment.notes,
-          updatedAt: new Date(),
-        },
-        { id: assignment.id }
-      );
-    }
-
-    // Вставляем отсутствующие задания
     await queryInterface.bulkInsert('assignments', assignments, {
       ignoreDuplicates: true,
       validate: false, // Избегаем проблем с хуками модели
@@ -96,9 +77,7 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.bulkDelete('assignments', { 
-      id: [1, 2, 3] 
-    });
+    await queryInterface.bulkDelete('assignments', null, {});
   }
 };
 

@@ -4,6 +4,9 @@ module.exports = {
   async up(queryInterface) {
     console.log('🚀 Создаем пользователей...');
     
+    // Сначала очищаем таблицу
+    await queryInterface.bulkDelete('users', null, {});
+
     const users = [
       {
         id: 1,
@@ -13,7 +16,7 @@ module.exports = {
         role: 'admin',
         phone: '+79001234567',
         masterId: null,
-        passwordHash: '123456', // простой текст для начала
+        passwordHash: '$2b$10$3/K9NciheqzEQk9/HHPQL.1iqaudTpIFR4fW6LyVbCkMzMjDicFeq', // password123
         departmentId: 1,
         position: 'Администратор',
         createdAt: new Date(),
@@ -27,7 +30,7 @@ module.exports = {
         role: 'director',
         phone: '+79007654321',
         masterId: null,
-        passwordHash: '123456',
+        passwordHash: '$2b$10$3/K9NciheqzEQk9/HHPQL.1iqaudTpIFR4fW6LyVbCkMzMjDicFeq', // password123
         departmentId: 1,
         position: 'Директор',
         createdAt: new Date(),
@@ -44,8 +47,6 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.bulkDelete('users', {
-      username: ['admin', 'director']
-    });
+    await queryInterface.bulkDelete('users', null, {});
   }
 };

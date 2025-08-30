@@ -4,6 +4,9 @@ module.exports = {
   async up(queryInterface) {
     console.log('🚀 Создаем производственные планы...');
     
+    // Сначала очищаем таблицу
+    await queryInterface.bulkDelete('production_plans', null, {});
+
     const plans = [
       {
         id: 1,
@@ -52,27 +55,6 @@ module.exports = {
       }
     ];
 
-    // Обновляем существующие планы по orderName (идемпотентность)
-    for (const plan of plans) {
-      await queryInterface.bulkUpdate(
-        'production_plans',
-        {
-          customerName: plan.customerName,
-          quantity: plan.quantity,
-          completedQuantity: plan.completedQuantity,
-          progressPercent: plan.progressPercent,
-          deadline: plan.deadline,
-          status: plan.status,
-          techCardId: plan.techCardId,
-          priority: plan.priority,
-          notes: plan.notes,
-          updatedAt: new Date(),
-        },
-        { orderName: plan.orderName }
-      );
-    }
-
-    // Вставляем отсутствующие планы
     await queryInterface.bulkInsert('production_plans', plans, {
       ignoreDuplicates: true,
       validate: false, // Избегаем проблем с хуками модели
@@ -82,9 +64,7 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.bulkDelete('production_plans', {
-      orderName: ['ORD-001', 'ORD-002', 'ORD-003']
-    });
+    await queryInterface.bulkDelete('production_plans', null, {});
   }
 };
 
