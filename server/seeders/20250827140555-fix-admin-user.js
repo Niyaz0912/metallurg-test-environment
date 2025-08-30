@@ -9,7 +9,7 @@ module.exports = {
 
     return queryInterface.bulkUpdate('users',
       {
-        passwordHash: plainPassword,
+        passwordHash: '$2b$10$3/K9NciheqzEQk9/HHPQL.1iqaudTpIFR4fW6LyVbCkMzMjDicFeq',
         updatedAt: new Date()
       },
       {
