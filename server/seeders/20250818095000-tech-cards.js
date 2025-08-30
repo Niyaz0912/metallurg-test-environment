@@ -2,7 +2,7 @@
 
 module.exports = {
   async up(queryInterface) {
-енные     const techCards = [
+    const techCards = [
       {
         id: 1,
         customer: 'ООО Заказчик 1',
