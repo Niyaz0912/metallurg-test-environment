@@ -5,5 +5,5 @@
 cmds = ["npm install --legacy-peer-deps", "npm run build"]
 
 [start]
-# Запускаем миграции и стартуем сервер
-cmd = "cd server && npx sequelize-cli db:migrate && npm start"
+# Проверяем структуру папок, запускаем миграции и стартуем сервер
+cmd = "echo 'Listing files:' && ls -R && echo 'End of file list.' && cd server && npx sequelize-cli db:migrate && npm start"
