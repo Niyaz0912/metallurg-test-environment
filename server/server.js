@@ -154,7 +154,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Загружаем роуты
+// --- ПРАВИЛЬНЫЙ ПОРЯДОК --- 
+
+// 1. Сначала ВСЕ API-роуты
 const departmentRoutes = require('./department/departmentRoutes');
 const userRoutes = require('./users/userRoutes');
 const assignmentRoutes = require('./assignments/assignmentRoutes');
@@ -162,7 +164,6 @@ const taskRoutes = require('./tasks/taskRoutes');
 const techCardRoutes = require('./techCards/techCardRoutes');
 const productionPlanRoutes = require('./productionPlans/productionPlanRoutes');
 
-// ✅ API роуты
 app.use('/api/departments', departmentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/assignments', assignmentRoutes);
@@ -170,7 +171,6 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/techcards', techCardRoutes);
 app.use('/api/productionPlans', productionPlanRoutes);
 
-// Health check для Railway
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -182,31 +182,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ✅ Railway-специфичный health check
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
-});
-
-app.get('/api/files/test', (req, res) => {
-  const uploadsPath = path.join(__dirname, 'uploads');
-  
-  try {
-    const files = fs.readdirSync(uploadsPath);
-    res.json({
-      message: 'Files API working',
-      uploadsPath: uploadsPath,
-      filesCount: files.length,
-      files: files.slice(0, 5)
-    });
-  } catch (error) {
-    res.status(500).json({
-      error: 'Cannot read uploads directory',
-      message: error.message
-    });
-  }
-});
-
-// API информация
 app.get('/api', (req, res) => {
   res.json({
     message: 'Metallurg API Server',
@@ -225,40 +200,24 @@ app.get('/api', (req, res) => {
   });
 });
 
-// ✅ Frontend статические файлы
+// 2. Потом Middleware для раздачи статических файлов фронтенда
 const frontendBuildPath = '/app/frontend/dist';
-console.log(`✅ Production mode: Serving static files from ${frontendBuildPath}`);
-
 if (fs.existsSync(frontendBuildPath)) {
-  console.log('🎨 Frontend build found, serving React app');
+  console.log('🎨 Frontend build found, serving React app from', frontendBuildPath);
   app.use(express.static(frontendBuildPath));
 } else {
-  console.log('⚠️ Frontend build not found');
-  if (!isRailway) {
-    console.log('📝 Run "cd frontend && npm run build" to create the build');
-  }
+  console.log('⚠️ Frontend build not found at', frontendBuildPath);
 }
 
-// ✅ 404 для API маршрутов
-app.use('/api/*catchall', (req, res) => {
-  res.status(404).json({
-    error: 'API Route not found',
-    path: req.path,
-    method: req.method
-  });
-});
-
-// ✅ ИСПРАВЛЕНИЕ: Catch-all handler для React Router с именованным параметром
+// 3. И только в самом конце — Fallback для SPA (отдает index.html для всех остальных GET запросов)
 app.get('*catchall', (req, res) => {
   const frontendIndexPath = path.join(frontendBuildPath, 'index.html');
-  
   if (fs.existsSync(frontendIndexPath)) {
     res.sendFile(frontendIndexPath);
   } else {
     res.status(404).json({ 
       error: 'Frontend not built',
-      railway: !!isRailway,
-      message: isRailway ? 'Frontend build missing in deployment' : 'Run: cd frontend && npm run build'
+      message: 'index.html not found in build directory'
     });
   }
 });
