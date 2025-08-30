@@ -5,73 +5,32 @@ const fs = require('fs');
 const path = require('path');
 const Sequelize = require('sequelize');
 const basename = path.basename(__filename);
-
-// ОТЛАДОЧНАЯ ИНФОРМАЦИЯ
-console.log('🔍 DEBUG: Environment detection');
-console.log('NODE_ENV from process.env:', process.env.NODE_ENV);
-console.log('RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT);
-console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
-console.log('MYSQLHOST:', process.env.MYSQLHOST ? 'SET' : 'NOT SET');
-console.log('MYSQLDATABASE:', process.env.MYSQLDATABASE);
-
-// ПРИНУДИТЕЛЬНО УСТАНАВЛИВАЕМ PRODUCTION для Railway
-const env = process.env.RAILWAY_ENVIRONMENT ? 'production' : (process.env.NODE_ENV || 'development');
-
-console.log('🎯 Final ENV mode:', env);
+const env = process.env.NODE_ENV || 'development';
 
 const db = {};
 let sequelize;
 
-if (env === 'test') {
-  // Для тестов используем SQLite в памяти
-  sequelize = new Sequelize({
-    dialect: 'sqlite',
-    storage: ':memory:',
-    logging: false,
-  });
-} else if (env === 'production') {
-  console.log('🚀 PRODUCTION MODE - Using Railway MySQL');
-
-  if (process.env.MYSQLHOST && process.env.MYSQLDATABASE && process.env.MYSQLUSER && process.env.MYSQLPASSWORD) {
-    console.log('✅ Using separate MySQL component variables for connection');
-    sequelize = new Sequelize({
-      database: process.env.MYSQLDATABASE,
-      username: process.env.MYSQLUSER,
-      password: process.env.MYSQLPASSWORD,
-      host: process.env.MYSQLHOST,
-      port: process.env.MYSQLPORT || 3306,
-      dialect: 'mysql',
-      logging: false,
-      pool: {
-        max: 5,
-        min: 0,
-        acquire: 30000,
-        idle: 10000
-      },
-      dialectOptions: {
-        ssl: {
-          require: true,
-          rejectUnauthorized: false
-        },
-        connectTimeout: 60000
+if (process.env.DATABASE_URL) {
+  console.log('🚀 Production mode: Connecting via DATABASE_URL');
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
+    dialect: 'postgres',
+    protocol: 'postgres',
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false // Required for Render databases
       }
-    });
-  } else {
-    console.error('❌ Critical database connection variables are missing!');
-    console.error('   Please ensure MYSQLHOST, MYSQLDATABASE, MYSQLUSER, and MYSQLPASSWORD are set in your environment.');
-    // В production не останавливаем приложение из-за БД, но оно не будет работать с БД
-  }
+    }
+  });
 } else {
-  console.log('⚠️ DEVELOPMENT MODE');
-  
-  // Для development используем локальные настройки
+  console.log('⚠️ Development mode: Connecting via local config');
   sequelize = new Sequelize({
-    database: process.env.DB_NAME || 'metallurgdb',
-    username: process.env.DB_USERNAME || 'root',
-    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME || 'metallurg_dev',
+    username: process.env.DB_USERNAME || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
     host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 3306,
-    dialect: 'mysql',
+    port: process.env.DB_PORT || 5432,
+    dialect: 'postgres',
     logging: false,
   });
 }
@@ -97,39 +56,6 @@ Object.keys(db).forEach(modelName => {
     db[modelName].associate(db);
   }
 });
-
-// Проверка подключения к БД (НЕ для тестов)
-if (env !== 'test') {
-  (async () => {
-    try {
-      await sequelize.authenticate();
-      console.log('✅ Database connection established successfully');
-      
-      // ВРЕМЕННО: Принудительно создаем таблицы в production
-      if (env === 'production') {
-        console.log('🔄 Creating tables automatically...');
-        await sequelize.sync({ force: false, alter: true });
-        console.log('✅ All tables created successfully');
-      }
-      
-      /*
-      // Синхронизация моделей в development
-      if (env === 'development') {
-        await sequelize.sync({ alter: true });
-        console.log('🔄 Database models synced');
-      }
-      */
-    } catch (error) {
-      console.error('❌ Unable to connect to the database:', error.message);
-      console.error('📚 Full error:', error);
-      
-      // В production не останавливаем приложение из-за БД
-      if (env !== 'production') {
-        process.exit(1);
-      }
-    }
-  })();
-}
 
 // Экспорт
 db.sequelize = sequelize;

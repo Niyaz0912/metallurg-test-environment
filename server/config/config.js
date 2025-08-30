@@ -2,29 +2,24 @@ require('dotenv').config();
 
 module.exports = {
   development: {
-    username: process.env.DB_USERNAME || 'metuser',
-    password: process.env.DB_PASSWORD || 'Alim@3011',
-    database: process.env.DB_NAME || 'metallurgdb',
+    username: process.env.DB_USERNAME || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
+    database: process.env.DB_NAME || 'metallurg_dev',
     host: process.env.DB_HOST || '127.0.0.1',
-    dialect: process.env.DB_DIALECT || 'mysql',
+    dialect: 'postgres',
   },
   test: {
-    username: process.env.DB_USERNAME || 'root',
+    username: process.env.DB_USERNAME || 'postgres',
     password: process.env.DB_PASSWORD || null,
     database: process.env.DB_NAME ? `${process.env.DB_NAME}_test` : 'default_test_db',
     host: process.env.DB_HOST || '127.0.0.1',
-    dialect: process.env.DB_DIALECT || 'mysql',
-    logging: console.log
+    dialect: 'postgres',
+    logging: false
   },
   
-  // ✅ ИСПРАВЛЕНО для Railway
   production: {
-    username: process.env.MYSQLUSER,
-    password: process.env.MYSQLPASSWORD,
-    database: process.env.MYSQLDATABASE,
-    host: process.env.MYSQLHOST,
-    port: process.env.MYSQLPORT,
-    dialect: 'mysql',
+    use_env_variable: 'DATABASE_URL',
+    dialect: 'postgres',
     dialectOptions: {
       ssl: {
         require: true,
