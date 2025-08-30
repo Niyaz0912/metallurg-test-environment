@@ -226,12 +226,12 @@ app.get('/api', (req, res) => {
 });
 
 // ✅ Frontend статические файлы
-    const frontendBuildPath = '/app/frontend/dist';
-    console.log(`✅ Production mode: Serving static files from ${frontendBuildPath}`);
+const frontendBuildPath = '/app/frontend/dist';
+console.log(`✅ Production mode: Serving static files from ${frontendBuildPath}`);
 
-if (fs.existsSync(frontendPath)) {
+if (fs.existsSync(frontendBuildPath)) {
   console.log('🎨 Frontend build found, serving React app');
-  app.use(express.static(frontendPath));
+  app.use(express.static(frontendBuildPath));
 } else {
   console.log('⚠️ Frontend build not found');
   if (!isRailway) {
@@ -250,7 +250,7 @@ app.use('/api/*catchall', (req, res) => {
 
 // ✅ ИСПРАВЛЕНИЕ: Catch-all handler для React Router с именованным параметром
 app.get('*catchall', (req, res) => {
-  const frontendIndexPath = path.join(frontendPath, 'index.html');
+  const frontendIndexPath = path.join(frontendBuildPath, 'index.html');
   
   if (fs.existsSync(frontendIndexPath)) {
     res.sendFile(frontendIndexPath);
