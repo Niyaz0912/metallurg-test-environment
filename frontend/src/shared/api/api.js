@@ -1,5 +1,5 @@
 // VITE_API_URL должен быть базовым URL, например: https://my-app.up.railway.app
-const API_URL = 'https://metallurg-test-environment-production.up.railway.app';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // Используем конструктор URL для безопасного соединения частей адреса.
 // Это решает проблему с двойными слэшами или дублированием /api.
