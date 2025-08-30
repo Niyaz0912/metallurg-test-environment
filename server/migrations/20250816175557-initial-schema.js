@@ -59,7 +59,6 @@ module.exports = {
             model: 'users',
             key: 'id'
           },
-          onUpdate: 'CASCADE',
           onDelete: 'SET NULL'
         },
         passwordHash: {
@@ -73,7 +72,6 @@ module.exports = {
             model: 'departments',
             key: 'id'
           },
-          onUpdate: 'CASCADE',
           onDelete: 'SET NULL'
         },
         position: {
@@ -88,7 +86,7 @@ module.exports = {
         updatedAt: {
           type: Sequelize.DATE,
           allowNull: false,
-          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
         }
       }, { transaction });
 
@@ -147,7 +145,7 @@ module.exports = {
         updatedAt: {
           type: Sequelize.DATE,
           allowNull: false,
-          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
         }
       }, { transaction });
 
@@ -227,7 +225,7 @@ module.exports = {
         updatedAt: {
           type: Sequelize.DATE,
           allowNull: false,
-          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
         }
       }, { transaction });
 
@@ -290,7 +288,7 @@ module.exports = {
         updatedAt: {
           type: Sequelize.DATE,
           allowNull: false,
-          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
         }
       }, { transaction });
 
@@ -374,7 +372,7 @@ module.exports = {
         updatedAt: {
           type: Sequelize.DATE,
           allowNull: false,
-          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
         }
       }, { transaction });
 
@@ -418,7 +416,7 @@ module.exports = {
         updatedAt: {
           type: Sequelize.DATE,
           allowNull: false,
-          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
         }
       }, { transaction });
 
@@ -466,7 +464,7 @@ module.exports = {
         updatedAt: {
           type: Sequelize.DATE,
           allowNull: false,
-          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
         }
       }, { transaction });
 
@@ -480,7 +478,6 @@ module.exports = {
           field: 'id'
         },
         onDelete: 'SET NULL',
-        onUpdate: 'CASCADE',
         transaction
       });
 
