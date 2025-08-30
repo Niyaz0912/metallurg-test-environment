@@ -49,7 +49,11 @@ if (env === 'test') {
         idle: 10000
       },
       dialectOptions: {
-        connectTimeout: 60000,
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        },
+        connectTimeout: 60000
       }
     });
   } else {
