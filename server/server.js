@@ -200,14 +200,29 @@ app.get('/api', (req, res) => {
   });
 });
 
-// 2. Потом Middleware для раздачи статических файлов фронтенда
-const frontendBuildPath = '/app/frontend/dist';
+// ✅ Frontend статические файлы
+const frontendBuildPath = path.join(__dirname, 'public');
+console.log(`✅ Production mode: Serving static files from ${frontendBuildPath}`);
+
 if (fs.existsSync(frontendBuildPath)) {
   console.log('🎨 Frontend build found, serving React app from', frontendBuildPath);
   app.use(express.static(frontendBuildPath));
 } else {
   console.log('⚠️ Frontend build not found at', frontendBuildPath);
 }
+
+// 3. И только в самом конце — Fallback для SPA (отдает index.html для всех остальных GET запросов)
+app.get('*catchall', (req, res) => {
+  const frontendIndexPath = path.join(frontendBuildPath, 'index.html');
+  if (fs.existsSync(frontendIndexPath)) {
+    res.sendFile(frontendIndexPath);
+  } else {
+    res.status(404).json({ 
+      error: 'Frontend not built',
+      message: 'index.html not found in build directory'
+    });
+  }
+});
 
 // 3. И только в самом конце — Fallback для SPA (отдает index.html для всех остальных GET запросов)
 app.get('*catchall', (req, res) => {
