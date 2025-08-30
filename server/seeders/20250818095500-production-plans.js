@@ -52,10 +52,7 @@ module.exports = {
       }
     ];
 
-    await queryInterface.bulkInsert('production_plans', plans, {
-      ignoreDuplicates: true,
-      validate: false, // Избегаем проблем с хуками модели
-    });
+    await queryInterface.bulkInsert('production_plans', plans, {});
 
     console.log('✅ Производственные планы созданы успешно!');
   },

@@ -19,6 +19,8 @@ module.exports = {
         actualEndDate: null,
         notes: 'Первая производственная партия',
         createdById: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       {
         id: 2,
@@ -36,6 +38,8 @@ module.exports = {
         actualEndDate: null,
         notes: null,
         createdById: 2,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       {
         id: 3,
@@ -53,33 +57,12 @@ module.exports = {
         actualEndDate: new Date(new Date().setDate(new Date().getDate() - 10)),
         notes: 'Проект завершён',
         createdById: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       }
     ];
 
-    const rowsToInsert = techCards.map(tc => ({
-      id: tc.id,
-      customer: tc.customer,
-      order: tc.order,
-      productName: tc.productName,
-      partNumber: tc.partNumber,
-      quantity: tc.quantity,
-      pdfUrl: tc.pdfUrl,
-      pdfFileSize: tc.pdfFileSize,
-      totalProducedQuantity: tc.totalProducedQuantity,
-      status: tc.status,
-      priority: tc.priority,
-      plannedEndDate: tc.plannedEndDate,
-      actualEndDate: tc.actualEndDate,
-      notes: tc.notes,
-      createdById: tc.createdById,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }));
-
-    await queryInterface.bulkInsert('tech_cards', rowsToInsert, {
-      ignoreDuplicates: true,
-      validate: false,
-    });
+    await queryInterface.bulkInsert('tech_cards', techCards, {});
   },
 
   async down(queryInterface) {
