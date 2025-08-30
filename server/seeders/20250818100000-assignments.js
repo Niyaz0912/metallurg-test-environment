@@ -23,7 +23,6 @@ module.exports = {
         operatorId: 3, // master из users
         techCardId: 1,
         shiftDate: now.toISOString().split('T')[0], // YYYY-MM-DD формат для DATEONLY
-        shiftType: 'day',
         taskDescription: 'Обработка партии 50 шт. корпуса подшипника',
         machineNumber: 'Станок-05',
         plannedQuantity: 50,
@@ -40,7 +39,6 @@ module.exports = {
         operatorId: 4, // employee1 из users
         techCardId: 2,
         shiftDate: tomorrow.toISOString().split('T')[0],
-        shiftType: 'night',
         taskDescription: 'Сварка 30 шт. вала привода',
         machineNumber: 'Сварочный пост-02',
         plannedQuantity: 30,
@@ -57,7 +55,6 @@ module.exports = {
         operatorId: 5, // employee2 из users
         techCardId: 3,
         shiftDate: twoDaysAgo.toISOString().split('T')[0],
-        shiftType: 'day',
         taskDescription: 'Контроль качества готовых крышек двигателя',
         machineNumber: 'Лаб-01',
         plannedQuantity: 40,
@@ -79,7 +76,6 @@ module.exports = {
           operatorId: assignment.operatorId,
           techCardId: assignment.techCardId,
           shiftDate: assignment.shiftDate,
-          shiftType: assignment.shiftType,
           taskDescription: assignment.taskDescription,
           machineNumber: assignment.machineNumber,
           plannedQuantity: assignment.plannedQuantity,
