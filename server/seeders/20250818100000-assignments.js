@@ -21,7 +21,6 @@ module.exports = {
       {
         id: 1,
         operatorId: 3, // master из users
-        productionPlanId: 1,
         techCardId: 1,
         shiftDate: now.toISOString().split('T')[0], // YYYY-MM-DD формат для DATEONLY
         shiftType: 'day',
@@ -39,7 +38,6 @@ module.exports = {
       {
         id: 2,
         operatorId: 4, // employee1 из users
-        productionPlanId: 2,
         techCardId: 2,
         shiftDate: tomorrow.toISOString().split('T')[0],
         shiftType: 'night',
@@ -57,7 +55,6 @@ module.exports = {
       {
         id: 3,
         operatorId: 5, // employee2 из users
-        productionPlanId: 3,
         techCardId: 3,
         shiftDate: twoDaysAgo.toISOString().split('T')[0],
         shiftType: 'day',
@@ -80,7 +77,6 @@ module.exports = {
         'assignments',
         {
           operatorId: assignment.operatorId,
-          productionPlanId: assignment.productionPlanId,
           techCardId: assignment.techCardId,
           shiftDate: assignment.shiftDate,
           shiftType: assignment.shiftType,
