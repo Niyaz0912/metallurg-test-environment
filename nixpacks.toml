@@ -5,5 +5,5 @@
 cmds = ["npm install --legacy-peer-deps", "npm run build"]
 
 [start]
-# Финальная отладка пути к фронтенду
-cmd = "cd server && node -e \"const path = require('path'); const fs = require('fs'); const p = path.join(__dirname, '../frontend/dist'); console.log('Checking path:', p); console.log('Exists?:', fs.existsSync(p));\" && npx sequelize-cli db:migrate && npm start"
+# Запускаем миграции и стартуем сервер
+cmd = "cd server && npx sequelize-cli db:migrate && npm start"

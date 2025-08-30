@@ -226,7 +226,8 @@ app.get('/api', (req, res) => {
 });
 
 // ✅ Frontend статические файлы
-const frontendPath = path.join(__dirname, '../../frontend/dist');
+    const frontendBuildPath = '/app/frontend/dist';
+    console.log(`✅ Production mode: Serving static files from ${frontendBuildPath}`);
 
 if (fs.existsSync(frontendPath)) {
   console.log('🎨 Frontend build found, serving React app');
