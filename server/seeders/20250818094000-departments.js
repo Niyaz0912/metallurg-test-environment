@@ -2,6 +2,21 @@
 
 module.exports = {
   up: async (queryInterface) => {
+    console.log('🔥 Запускаем ГЛАВНУЮ ОЧИСТКУ перед заполнением...');
+    // Очищаем таблицы в порядке, обратном зависимостям, чтобы избежать ошибок внешних ключей
+    await queryInterface.bulkDelete('assignments', null, {});
+    // tech_card_executions и tech_card_accesses не имеют сидеров, но очистим на всякий случай
+    await queryInterface.bulkDelete('tech_card_executions', null, {});
+    await queryInterface.bulkDelete('tech_card_accesses', null, {});
+    // tasks не имеют сидера, но очистим
+    await queryInterface.bulkDelete('tasks', null, {});
+    await queryInterface.bulkDelete('production_plans', null, {});
+    await queryInterface.bulkDelete('tech_cards', null, {});
+    await queryInterface.bulkDelete('users', null, {});
+    await queryInterface.bulkDelete('departments', null, {});
+    console.log('✅ Очистка завершена.');
+
+    console.log('🚀 Создаем отделы...');
     await queryInterface.bulkInsert(
       'departments',
       [
@@ -14,9 +29,18 @@ module.exports = {
       ],
       {}
     );
+    console.log('✅ Отделы созданы.');
   },
 
   down: async (queryInterface) => {
+    // Для down команды порядок тоже важен
+    await queryInterface.bulkDelete('assignments', null, {});
+    await queryInterface.bulkDelete('tech_card_executions', null, {});
+    await queryInterface.bulkDelete('tech_card_accesses', null, {});
+    await queryInterface.bulkDelete('tasks', null, {});
+    await queryInterface.bulkDelete('production_plans', null, {});
+    await queryInterface.bulkDelete('tech_cards', null, {});
+    await queryInterface.bulkDelete('users', null, {});
     await queryInterface.bulkDelete('departments', null, {});
   },
 };

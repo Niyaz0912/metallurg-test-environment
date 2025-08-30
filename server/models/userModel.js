@@ -56,7 +56,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     departmentId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true, // ИСПРАВЛЕНО: соответствует миграции
       references: {
         model: 'departments',
         key: 'id'

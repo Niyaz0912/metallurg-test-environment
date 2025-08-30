@@ -7,7 +7,7 @@ module.exports = {
     const assignments = [
       {
         id: 1,
-        operatorId: 3,
+        operatorId: 1, // admin
         productionPlanId: 1,
         techCardId: 1,
         shiftDate: new Date(),
@@ -25,7 +25,7 @@ module.exports = {
       },
       {
         id: 2,
-        operatorId: 4,
+        operatorId: 2, // director
         productionPlanId: 2,
         techCardId: 2,
         shiftDate: new Date(),
@@ -43,7 +43,7 @@ module.exports = {
       },
       {
         id: 3,
-        operatorId: 5,
+        operatorId: 1, // admin
         productionPlanId: 3,
         techCardId: 3,
         shiftDate: new Date(),
