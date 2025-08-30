@@ -4,7 +4,7 @@ module.exports = {
   async up(queryInterface) {
     console.log('🚀 Создаем пользователей...');
     
-ль    const users = [
+    const users = [
       {
         id: 1,
         username: 'admin',
