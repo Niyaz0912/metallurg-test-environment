@@ -4,9 +4,6 @@ module.exports = {
   async up(queryInterface) {
     console.log('🚀 Создаем сменные задания...');
     
-    // Сначала очищаем таблицу
-    await queryInterface.bulkDelete('assignments', null, {});
-
     // Вспомогательные даты
     const now = new Date();
     const tomorrow = new Date(now);

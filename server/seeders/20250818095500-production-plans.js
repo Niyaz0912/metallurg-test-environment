@@ -4,9 +4,6 @@ module.exports = {
   async up(queryInterface) {
     console.log('🚀 Создаем производственные планы...');
     
-    // Сначала очищаем таблицу
-    await queryInterface.bulkDelete('production_plans', null, {});
-
     const plans = [
       {
         id: 1,

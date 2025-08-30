@@ -4,10 +4,7 @@ module.exports = {
   async up(queryInterface) {
     console.log('🚀 Создаем пользователей...');
     
-    // Сначала очищаем таблицу
-    await queryInterface.bulkDelete('users', null, {});
-
-    const users = [
+ль    const users = [
       {
         id: 1,
         username: 'admin',

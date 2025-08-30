@@ -2,11 +2,7 @@
 
 module.exports = {
   async up(queryInterface) {
-
-    // Сначала очищаем таблицу
-    await queryInterface.bulkDelete('tech_cards', null, {});
-
-    const techCards = [
+енные     const techCards = [
       {
         id: 1,
         customer: 'ООО Заказчик 1',
