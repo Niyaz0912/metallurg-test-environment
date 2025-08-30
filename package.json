@@ -6,7 +6,7 @@
   "scripts": {
     "build:frontend": "cd frontend && npm install && npm run build",
     "install:backend": "cd server && npm install",
-    "build": "npm run build:frontend && rm -rf server/public && cp -r frontend/dist server/public && npm run install:backend",
+    "build": "npm run build:frontend && ncp frontend/dist server/public && npm run install:backend",
     "start": "cd server && npm start",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "cd frontend && npm run dev",
@@ -65,6 +65,7 @@
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.11",
     "globals": "^15.9.0",
+    "ncp": "^2.0.0",
     "npm-run-all": "^4.1.5",
     "rimraf": "^6.0.1",
     "typescript": "^5.5.3",
