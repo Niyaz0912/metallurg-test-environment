@@ -2,16 +2,6 @@
 
 module.exports = {
   up: async (queryInterface) => {
-    const { sequelize } = queryInterface;
-
-    // Безопасная очистка (MySQL)
-    await sequelize.transaction(async (transaction) => {
-      const opt = { transaction };
-      await sequelize.query('SET FOREIGN_KEY_CHECKS = 0', opt);
-      await sequelize.query('TRUNCATE TABLE `departments`', opt);
-      await sequelize.query('SET FOREIGN_KEY_CHECKS = 1', opt);
-    });
-
     // Вставляем только существующие колонки
     await queryInterface.bulkInsert(
       'departments',
