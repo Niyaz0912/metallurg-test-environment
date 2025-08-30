@@ -5,6 +5,5 @@
 cmds = ["npm install --legacy-peer-deps", "npm run build"]
 
 [start]
-# Проверяем структуру папок, запускаем миграции и стартуем сервер
-# Force redeploy
-cmd = "echo 'Listing files:' && ls -R && echo 'End of file list.' && cd server && npx sequelize-cli db:migrate && npm start"
+# Финальная отладка пути к фронтенду
+cmd = "cd server && node -e \"const path = require('path'); const fs = require('fs'); const p = path.join(__dirname, '../frontend/dist'); console.log('Checking path:', p); console.log('Exists?:', fs.existsSync(p));\" && npx sequelize-cli db:migrate && npm start"
