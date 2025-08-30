@@ -19,24 +19,17 @@ module.exports = {
   
   // ✅ ИСПРАВЛЕНО для Railway
   production: {
-    // Используем DATABASE_URL от Railway
-    use_env_variable: 'DATABASE_URL',
+    username: process.env.MYSQLUSER,
+    password: process.env.MYSQLPASSWORD,
+    database: process.env.MYSQLDATABASE,
+    host: process.env.MYSQLHOST,
+    port: process.env.MYSQLPORT,
     dialect: 'mysql',
     dialectOptions: {
       ssl: {
         require: true,
         rejectUnauthorized: false
       }
-    },
-    
-    // Альтернативно можно использовать отдельные переменные:
-    /*
-    username: process.env.MYSQLUSER,
-    password: process.env.MYSQLPASSWORD,
-    database: process.env.MYSQLDATABASE,
-    host: process.env.MYSQLHOST,
-    port: process.env.MYSQLPORT || 3306,
-    dialect: 'mysql',
-    */
+    }
   }
 };
