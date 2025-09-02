@@ -5,5 +5,5 @@
 cmds = ["cd server && npm install"]
 
 [start]
-# Запускаем миграции и стартуем сервер
-cmd = "cd server && npx sequelize-cli db:migrate && npm start"
+# Запускаем ТОЛЬКО сервер для проверки
+cmd = "cd server && npm start"
