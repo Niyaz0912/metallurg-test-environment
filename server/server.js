@@ -213,18 +213,6 @@ async function startServer() {
     await db.sequelize.authenticate();
     console.log('✅ Database connection established');
 
-    // ✅ Автоматические миграции при старте в production
-    if (isProduction) {
-      try {
-        console.log('🔄 Running migrations...');
-        await db.sequelize.migrate();
-        console.log('✅ Migrations completed.');
-      } catch (error) {
-        console.error('❌ Migration failed:', error);
-        process.exit(1); // Выход, если миграции не прошли
-      }
-    }
-
     // ✅ Синхронизация только в development
     if (!isProduction) {
       console.log('🔄 Development mode: Database sync disabled');
