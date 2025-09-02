@@ -1,8 +1,8 @@
 # nixpacks.toml
 
 [phases.build]
-# Устанавливаем все зависимости и собираем фронтенд
-cmds = ["npm install --legacy-peer-deps", "npm run build"]
+# Устанавливаем зависимости именно для нашего сервера
+cmds = ["cd server && npm install"]
 
 [start]
 # Запускаем миграции и стартуем сервер
