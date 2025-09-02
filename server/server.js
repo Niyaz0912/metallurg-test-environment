@@ -52,67 +52,10 @@ if (!fs.existsSync(uploadsDir)) {
   console.log('📁 Created uploads directory');
 }
 
-// ✅ УПРОЩЕННАЯ И УНИВЕРСАЛЬНАЯ НАСТРОЙКА CORS
 const isProduction = process.env.NODE_ENV === 'production';
 const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_NAME;
 
-// Определяем допустимые origins
-const getAllowedOrigins = () => {
-  if (isProduction) {
-    return [
-      process.env.FRONTEND_URL,
-      `https://${process.env.RAILWAY_PROJECT_NAME || 'metallurg'}.up.railway.app`,
-      'https://metallurg-test-environment-production.up.railway.app',
-      'http://localhost:3001', // для локального тестирования production
-      'http://localhost:5173'
-    ].filter(Boolean);
-  } else {
-    return [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:8081',
-      'http://localhost:19000',
-      'http://localhost:19002',
-      'http://192.168.1.180:8081',
-      'http://192.168.1.180:19000',
-      'http://10.0.2.2:8081',
-      'capacitor://localhost',
-      'ionic://localhost'
-    ];
-  }
-};
-
-app.use(cors({
-  origin: function (origin, callback) {
-    // Разрешить запросы без origin (мобильные приложения, Postman)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = getAllowedOrigins();
-    
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      // ✅ На Railway в production разрешаем все origins для удобства
-      if (isRailway && isProduction) {
-        console.log(`⚠️ CORS: Разрешен неизвестный origin на Railway: ${origin}`);
-        callback(null, true);
-      } else if (!isProduction) {
-        // В development тоже разрешаем для удобства отладки
-        console.log(`⚠️ CORS: Разрешен в development: ${origin}`);
-        callback(null, true);
-      } else {
-        console.log(`❌ CORS блокировка origin: ${origin}`);
-        callback(new Error('Not allowed by CORS'));
-      }
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: true,
-  preflightContinue: false,
-  optionsSuccessStatus: 200
-}));
+app.use(cors());
 
 // ✅ ИСПРАВЛЕНИЕ: Обработка preflight запросов с именованным параметром
 app.options('*catchall', cors());

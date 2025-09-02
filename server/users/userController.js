@@ -1,5 +1,5 @@
 const db = require('../models');
-// const bcrypt = require('bcrypt'); // ❌ ОТКЛЮЧЕНО для тестовой среды
+// const bcrypt = require('bcrypt'); // ОТКЛЮЧЕНО для тестовой среды
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const nodemailer = require('nodemailer');
@@ -92,10 +92,10 @@ exports.login = async (req, res) => {
 
     console.log('🔍 Попытка входа:', username);
 
-    // Используем scope 'withPassword' для получения пароля
-    const user = await db.User.scope('withPassword').findOne({
+    const user = await db.User.unscoped().findOne({
       where: { username },
-      include: [{ model: db.Department, as: 'department' }]
+      include: [{ model: db.Department, as: 'department' }],
+      attributes: { include: ['passwordHash'] }
     });
 
     console.log('👤 Пользователь найден:', user ? user.username : 'НЕТ');

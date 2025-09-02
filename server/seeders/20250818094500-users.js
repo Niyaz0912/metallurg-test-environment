@@ -32,6 +32,62 @@ module.exports = {
         position: 'Директор',
         createdAt: new Date(),
         updatedAt: new Date()
+      },
+      {
+        id: 3,
+        username: 'master_prod',
+        firstName: 'Мастер',
+        lastName: 'Производства',
+        role: 'master',
+        phone: '+79001112233',
+        masterId: null,
+        passwordHash: '123456',
+        departmentId: 5,
+        position: 'Мастер',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 4,
+        username: 'employee_prod',
+        firstName: 'Сотрудник',
+        lastName: 'Производства',
+        role: 'employee',
+        phone: '+79002223344',
+        masterId: 3, // Master is user with id 3
+        passwordHash: '123456',
+        departmentId: 5,
+        position: 'Сотрудник',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 5,
+        username: 'employee_quality',
+        firstName: 'Сотрудник',
+        lastName: 'Качества',
+        role: 'employee',
+        phone: '+79003334455',
+        masterId: null,
+        passwordHash: '123456',
+        departmentId: 3,
+        position: 'Сотрудник',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 6,
+        username: 'employee_hr',
+        firstName: 'Сотрудник',
+        lastName: 'HR',
+        role: 'employee',
+        phone: '+79004445566',
+        masterId: null,
+        passwordHash: '123456',
+        departmentId: 2,
+        position: 'Сотрудник',
+        createdAt: new Date(),
+        updatedAt: new Date()
       }
     ];
 
@@ -45,7 +101,7 @@ module.exports = {
 
   async down(queryInterface) {
     await queryInterface.bulkDelete('users', {
-      username: ['admin', 'director']
+      username: ['admin', 'director', 'master_prod', 'employee_prod', 'employee_quality', 'employee_hr']
     });
   }
 };
