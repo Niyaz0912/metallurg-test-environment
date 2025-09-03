@@ -1,7 +1,8 @@
 // frontend/src/features/users/components/RoleEditor.tsx
 import React from 'react';
-import { UserRole } from '../../../shared/types/index.ts';
+
 import { updateUserRole } from '../../../shared/api/users';
+import { UserRole } from '../../../shared/types/index.ts';
 
 interface RoleEditorProps {
   userId: number;

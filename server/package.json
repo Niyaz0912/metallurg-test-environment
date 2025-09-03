@@ -10,7 +10,9 @@
     "test:coverage": "jest --coverage",
     "migrate": "npx sequelize-cli db:migrate",
     "seed": "npx sequelize-cli db:seed:all",
-    "build": "echo \"nothing to build for backend\""
+    "build": "echo \"nothing to build for backend\"",
+    "lint": "eslint . --ext ts,js --report-unused-disable-directives --max-warnings 0 --fix",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "array-flatten": "^1.1.1",

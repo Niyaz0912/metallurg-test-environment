@@ -1,4 +1,4 @@
-import { WikiPage, Position, DocumentFolder, User } from '../types';
+import { WikiPage, Position, User } from '../../src/shared/types';
 
 export const users: User[] = [
   {
@@ -11,13 +11,13 @@ export const users: User[] = [
     id: '2',
     name: 'Михаил Сидоров',
     email: 'mikhail.sidorov@company.com',
-    role: 'editor'
+    role: 'employee'
   },
   {
     id: '3',
     name: 'Елена Козлова',
     email: 'elena.kozlova@company.com',
-    role: 'viewer'
+    role: 'employee'
   }
 ];
 

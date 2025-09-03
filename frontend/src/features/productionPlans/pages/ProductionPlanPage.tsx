@@ -1,8 +1,10 @@
 // src/features/productionPlans/ProductionPlansPage.tsx
 import React, { useState, useEffect } from 'react';
-import { ProductionPlansList } from './components/ProductionPlanList';
-import { ProductionPlan, CreateProductionPlanData } from './productionPlansTypes';
-import { useAuth } from '../auth/hooks/useAuth';
+
+import { useAuth } from '../../auth/hooks/useAuth';
+import { ProductionPlansList } from '../components/ProductionPlanList';
+
+import { ProductionPlan, CreateProductionPlanData } from '../productionPlansTypes';
 
 export const ProductionPlansPage = () => {
   const [plans, setPlans] = useState<ProductionPlan[]>([]);
@@ -46,7 +48,7 @@ export const ProductionPlansPage = () => {
         console.log('✅ Получены планы из БД:', data);
 
         // Преобразуем данные в нужный формат
-        const formattedPlans: ProductionPlan[] = data.map((plan: any) => ({
+        const formattedPlans: ProductionPlan[] = data.map((plan: ProductionPlan) => ({
           id: plan.id,
           orderName: plan.orderName,
           customerName: plan.customerName,

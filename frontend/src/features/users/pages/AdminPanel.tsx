@@ -1,11 +1,12 @@
 // frontend/src/features/users/AdminPanel.tsx
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../auth/hooks/useAuth';
-import UserList from './components/UserList';
-import UserCreateForm from './components/UserCreateForm';
-import ProductionPlansManager from './components/ProductionPlansManager';
+
+import { useAuth } from '../../auth/hooks/useAuth';
+import ProductionPlansManager from '../../productionPlans/components/ProductionPlansManager';
+import UserCreateForm from '../components/UserCreateForm';
+import UserList from '../components/UserList';
 // ✅ Правильный импорт из техкарт
-import TechCardsManager from '../techCard/components/TechCardsManager';
+import TechCardsManager from '../../techCard/components/TechCardsManager';
 
 interface User {
   id: number;
@@ -26,16 +27,6 @@ const AdminPanel: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [activeSection, setActiveSection] = useState<'users' | 'plans' | 'techcards'>('users');
-
-  // Проверка прав доступа
-  if (!user || user.role !== 'admin') {
-    return (
-      <div className="text-center py-8">
-        <h2 className="text-2xl font-bold text-red-600 mb-4">Доступ запрещен</h2>
-        <p>У вас нет прав администратора.</p>
-      </div>
-    );
-  }
 
   useEffect(() => {
     fetchUsers();
@@ -67,13 +58,23 @@ const AdminPanel: React.FC = () => {
   };
 
   const handleUserCreated = () => {
-    setShowCreateForm(false);
-    fetchUsers();
+    setShowCreateForm(false); // Close the form after creation
+    fetchUsers(); // Refresh the user list
   };
 
   const handleUserDeleted = () => {
-    fetchUsers();
+    fetchUsers(); // Refresh the user list
   };
+
+  // Проверка прав доступа
+  if (!user || user.role !== 'admin') {
+    return (
+      <div className="text-center py-8">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Доступ запрещен</h2>
+        <p>У вас нет прав администратора.</p>
+      </div>
+    );
+  }
 
   if (loading || loadingUsers) {
     return (

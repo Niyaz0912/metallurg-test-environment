@@ -1,5 +1,6 @@
 // src/features/productionPlans/components/ProductionPlanCard.tsx
 import { Calendar, User } from 'lucide-react';
+
 import { ProductionPlan } from '../productionPlansTypes'; // ИСПРАВЛЕНО: добавлен импорт
 
 interface ProductionPlanCardProps {

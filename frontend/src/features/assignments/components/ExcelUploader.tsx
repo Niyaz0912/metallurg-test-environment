@@ -10,7 +10,7 @@ interface UploadResult {
     };
     details: {
         success: Array<{ row: number; operator: string; machine: string; assignmentId: number }>;
-        errors: Array<{ row: number; error: string; data: any }>;
+        errors: Array<{ row: number; error: string; data: Record<string, unknown> }>;
         skipped: Array<{ row: number; reason: string }>;
     };
 }

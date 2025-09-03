@@ -1,5 +1,6 @@
 // frontend/src/features/assignments/components/AssignmentForm.tsx
 import React, { useState, useEffect } from 'react';
+
 import { createAssignment } from '../../../shared/api/assignmentsApi';
 
 interface User {
@@ -130,7 +131,7 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({ onAssignmentCreated }) 
 
       onAssignmentCreated?.();
       
-    } catch (err) {
+    } catch (_err) { // eslint-disable-line @typescript-eslint/no-unused-vars
       setError('Ошибка при создании задания');
     } finally {
       setLoading(false);

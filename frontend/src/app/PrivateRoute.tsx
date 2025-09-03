@@ -1,6 +1,7 @@
 // frontend/src/app/PrivateRoute.tsx
 import React from 'react';
 import { Navigate } from 'react-router-dom';
+
 import { useAuth } from '../features/auth/hooks/useAuth';
 
 interface PrivateRouteProps {

@@ -1,2 +1,2 @@
-export { default as AuthSection } from './AuthSection';
+export { default as AuthSection } from './pages/AuthSection';
 export * from './components';

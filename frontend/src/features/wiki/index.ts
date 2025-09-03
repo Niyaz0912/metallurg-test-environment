@@ -1,1 +1,1 @@
-export { default as WikiSection } from './WikiSection';
+export { default as WikiSection } from './pages/WikiSection';

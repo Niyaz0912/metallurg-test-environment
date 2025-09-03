@@ -5,7 +5,12 @@
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@app/*": ["./frontend/src/app/*"],
+      "@common/*": ["./frontend/src/common/*"],
+      "@data/*": ["./frontend/src/data/*"],
+      "@features/*": ["./frontend/src/features/*"],
+      "@shared/*": ["./frontend/src/shared/*"]
     },
     "types": ["vite/client", "@types/node", "vitest/globals"], 
     "strict": true,

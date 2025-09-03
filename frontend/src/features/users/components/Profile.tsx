@@ -1,12 +1,9 @@
 // frontend/src/features/users/components/Profile.tsx
 import React, { useEffect, useState } from 'react';
+
 import { useAuth } from '../../auth/hooks/useAuth';
 
-interface ProfileProps {
-  // Убираем все пропсы, используем контекст
-}
-
-const Profile: React.FC<ProfileProps> = () => {
+const Profile: React.FC = () => {
   const { user, logout, loading } = useAuth();
   const [profile, setProfile] = useState(user);
 

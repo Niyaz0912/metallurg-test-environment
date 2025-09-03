@@ -56,8 +56,8 @@ const UserEditForm: React.FC<UserEditFormProps> = ({ user, onUserUpdated, onCanc
         const data = await response.json();
         setDepartments(data);
       }
-    } catch (error) {
-      console.error('Ошибка загрузки департаментов:', error);
+    } catch {  // ✅ ИСПРАВЛЕНО: убран параметр _error
+      console.error('Ошибка загрузки департаментов:');  // ✅ ИСПРАВЛЕНО: убран _error из console.error
     }
   };
 
@@ -86,7 +86,7 @@ const UserEditForm: React.FC<UserEditFormProps> = ({ user, onUserUpdated, onCanc
         const errorData = await response.json();
         setError(errorData.message || 'Ошибка обновления пользователя');
       }
-    } catch (error) {
+    } catch {  // ✅ ИСПРАВЛЕНО: убран параметр _error
       setError('Ошибка соединения с сервером');
     } finally {
       setLoading(false);
@@ -206,3 +206,4 @@ const UserEditForm: React.FC<UserEditFormProps> = ({ user, onUserUpdated, onCanc
 };
 
 export default UserEditForm;
+

@@ -29,7 +29,7 @@ const RegisterForm: React.FC<Props> = ({ onRegisterSuccess }) => {
     fetch('http://127.0.0.1:3001/api/departments')
       .then((r) => r.json())
       .then(setDepartments)
-      .catch((e) => setError('Ошибка загрузки департаментов'));
+      .catch(() => setError('Ошибка загрузки департаментов'));
   }, []);
 
   const handleChange = (
@@ -66,8 +66,8 @@ const RegisterForm: React.FC<Props> = ({ onRegisterSuccess }) => {
       // Передаем данные в onRegisterSuccess
       onRegisterSuccess(data.token, data.role, data.departmentId);
     }, 1500);
-  } catch (e: any) {
-    setError(e.message || 'Ошибка регистрации');
+  } catch (error: unknown) {
+    setError((error as Error).message || 'Ошибка регистрации');
   } finally {
     setLoading(false);
   }

@@ -2,16 +2,17 @@
 
 // frontend/src/features/techCard/components/TechCardsManager.tsx
 import React, { useState, useEffect } from 'react';
+
 import { 
   fetchTechCards, 
   deleteTechCard,
   updateTechCardStatus,
   type TechCard,
   type TechCardStatus,
-  getTechCardProgress,
-  isTechCardOverdue,
-  getDaysToDeadline
+    getTechCardProgress,
+  isTechCardOverdue
 } from '../../../shared/api/techCardsApi';
+
 import TechCardForm from './TechCardForm';
 import TechCardViewer from './TechCardViewer';
 
@@ -195,7 +196,6 @@ const TechCardsManager: React.FC = () => {
               {filteredCards.map((card) => {
                 const progress = getTechCardProgress(card);
                 const isOverdue = isTechCardOverdue(card);
-                const daysToDeadline = getDaysToDeadline(card);
                 
                 return (
                   <tr key={card.id} className="hover:bg-gray-50">

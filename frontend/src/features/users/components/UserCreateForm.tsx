@@ -42,8 +42,8 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onUserCreated }) => {
         const data = await response.json();
         setDepartments(data);
       }
-    } catch (error) {
-      console.error('Ошибка загрузки департаментов:', error);
+    } catch {  // ✅ ИСПРАВЛЕНО: убран параметр _error
+      console.error('Ошибка загрузки департаментов:');  // ✅ ИСПРАВЛЕНО: убран _error из console.error
     }
   };
 
@@ -81,7 +81,7 @@ const UserCreateForm: React.FC<UserCreateFormProps> = ({ onUserCreated }) => {
         const errorData = await response.json();
         setError(errorData.message || 'Ошибка создания пользователя');
       }
-    } catch (error) {
+    } catch {  // ✅ ИСПРАВЛЕНО: убран параметр _error
       setError('Ошибка соединения с сервером');
     } finally {
       setLoading(false);

@@ -1,6 +1,7 @@
-import React from 'react';
 import { Calendar, User, Tag, Eye } from 'lucide-react';
-import { WikiPage } from '../types';
+import React from 'react';
+
+import { WikiPage } from '../../../shared/types';
 
 interface WikiCardProps {
   page: WikiPage;

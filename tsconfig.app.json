@@ -16,12 +16,18 @@
  "noUnusedParameters": true,
  "noFallthroughCasesInSwitch": true,
 
+ "esModuleInterop": true,
+
  "baseUrl": "src",
  "paths": {
- "@/*": ["*"]
+ "@/*": ["*"],
+ "@app/*": ["app/*"],
+ "@common/*": ["common/*"],
+ "@data/*": ["data/*"],
+ "@features/*": ["features/*"],
+ "@shared/*": ["shared/*"]
  },
  "types": ["node"]
  },
- "include": ["src"]
+ "include": ["src", "src/vite-env.d.ts"]
 }
-

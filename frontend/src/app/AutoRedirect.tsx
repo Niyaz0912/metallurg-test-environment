@@ -1,6 +1,7 @@
 // frontend/src/app/AutoRedirect.tsx
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import { useAuth } from '../features/auth/hooks/useAuth';
 
 const AutoRedirect: React.FC = () => {

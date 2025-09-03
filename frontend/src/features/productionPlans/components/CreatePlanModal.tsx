@@ -1,6 +1,7 @@
 // src/features/productionPlans/components/CreatePlanModal.tsx
-import { useState } from 'react';
 import { X } from 'lucide-react';
+import { useState } from 'react';
+
 import { CreateProductionPlanData } from '../productionPlansTypes';
 
 interface CreatePlanModalProps {

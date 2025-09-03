@@ -1,20 +1,24 @@
 // frontend/src/app/App.tsx
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+
+import AssignmentsPage from '../features/assignments/pages/AssignmentsPage';
+import { useAuth } from '../features/auth/hooks/useAuth';
+import AuthSection from '../features/auth/pages/AuthSection';
+import DepartmentPortal from '../features/departments/pages/DepartmentPortal';
+import ProductionPlansPage from '../features/productionPlans/pages/ProductionPlanPage';
+import TechCardsPage from '../features/techCard/pages/TechCardsPage';
+import Profile from '../features/users/components/Profile';
+import AdminPanel from '../features/users/pages/AdminPanel';
+import WikiSection from '../features/wiki/pages/WikiSection';
+
+import AutoRedirect from './AutoRedirect';
 import Header from './layout/Header';
 import SubHeader from './layout/SubHeader';
 import MainPage from './MainPage';
-import AuthSection from '../features/auth/AuthSection';
-import ProductionPlansPage from '../features/productionPlans/ProductionPlanPage';
-import Profile from '../features/users/components/Profile';
-import WikiSection from '../features/wiki/WikiSection';
-import TechCardsPage from '../features/techCard/TechCardsPage';
-import DepartmentPortal from '../features/departments/DepartmentPortal';
-import AdminPanel from '../features/users/AdminPanel';
+
 import PrivateRoute from './PrivateRoute';
-import AutoRedirect from './AutoRedirect';
-import { useAuth } from '../features/auth/hooks/useAuth';
-import AssignmentsPage from '../features/assignments/AssignmentsPage';
+
 
 const AppContent: React.FC = () => {
   const { user, loading, login } = useAuth();

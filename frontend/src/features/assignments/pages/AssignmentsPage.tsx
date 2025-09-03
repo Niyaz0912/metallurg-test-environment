@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { useAuth } from '../auth/hooks/useAuth';
-import AssignmentList from './components/AssignmentList';
-import AssignmentForm from './components/AssignmentForm';
-import ExcelUploader from './components/ExcelUploader';
+
+import { useAuth } from '../../auth/hooks/useAuth';
+import AssignmentForm from '../components/AssignmentForm';
+import AssignmentList from '../components/AssignmentList';
+import ExcelUploader from '../components/ExcelUploader';
 
 const AssignmentsPage: React.FC = () => {
   const { user } = useAuth();

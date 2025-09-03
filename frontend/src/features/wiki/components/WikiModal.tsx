@@ -1,6 +1,7 @@
-import React from 'react';
 import { X, Calendar, User, Tag, Edit } from 'lucide-react';
-import { WikiPage } from '../types';
+import React from 'react';
+
+import { WikiPage } from '../../../shared/types';
 
 interface WikiModalProps {
   page: WikiPage | null;

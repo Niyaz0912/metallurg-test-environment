@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ProductionTasks } from './ProductionTask';
-import { ProductionReports } from './ProductionReports';
+import React, { useState } from 'react';
+
 import { EquipmentStatus } from './EquipmentStatus';
+import { ProductionReports } from './ProductionReports';
+import { ProductionTasks } from './ProductionTask';
 
 interface Task {
   id: number;

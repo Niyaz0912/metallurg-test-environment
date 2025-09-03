@@ -1,9 +1,12 @@
 // src/features/productionPlans/components/ProductionPlansList.tsx
-import { useState } from 'react';
 import { Plus, Upload } from 'lucide-react';
-import { ProductionPlanCard } from './ProductionPlanCard';
-import { CreatePlanModal } from './CreatePlanModal';
+import { useState } from 'react';
+
 import { ProductionPlan, CreateProductionPlanData } from '../productionPlansTypes';
+
+import { CreatePlanModal } from './CreatePlanModal';
+import { ProductionPlanCard } from './ProductionPlanCard';
+
 
 interface ProductionPlansListProps {
   plans: ProductionPlan[];
@@ -24,8 +27,6 @@ export const ProductionPlansList = ({
 }: ProductionPlansListProps) => {
   
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingPlan, setEditingPlan] = useState<ProductionPlan | null>(null);
-  const [deletingPlanId, setDeletingPlanId] = useState<number | null>(null);
 
   const canEdit = userRole === 'admin' || userRole === 'director';
 

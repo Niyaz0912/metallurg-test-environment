@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { fetchTasks } from '../../shared/api/tasksApi';
+
+import { fetchTasks } from '../../../shared/api/tasksApi';
 
 interface Task {
   id: number;
@@ -25,7 +26,7 @@ const TaskList: React.FC = () => {
       try {
         const data = await fetchTasks();
         setTasks(data);
-      } catch (err) {
+      } catch {  // ✅ ИСПРАВЛЕНО: убран параметр _err
         setError('Ошибка при загрузке задач');
       } finally {
         setLoading(false);
@@ -60,3 +61,4 @@ const TaskList: React.FC = () => {
 };
 
 export default TaskList;
+

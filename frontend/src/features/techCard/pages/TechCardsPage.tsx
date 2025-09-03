@@ -1,17 +1,17 @@
 // frontend/src/features/techCard/TechCardsPage.tsx
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../auth/hooks/useAuth';
+
 import {
   fetchTechCards,
   deleteTechCard,
   updateTechCardStatus,
   type TechCard,
-  getTechCardProgress,
-  getUniqueOperatorsCount
-} from '../../shared/api/techCardsApi';
-import TechCardList from './components/TechCardList';
-import TechCardForm from './components/TechCardForm';
-import TechCardViewer from './components/TechCardViewer';
+} from '../../../shared/api/techCardsApi';
+import { useAuth } from '../../auth/hooks/useAuth';
+
+import TechCardForm from '../components/TechCardForm';
+import TechCardList from '../components/TechCardList';
+import TechCardViewer from '../components/TechCardViewer';
 
 const TechCardsPage: React.FC = () => {
   const { user } = useAuth();

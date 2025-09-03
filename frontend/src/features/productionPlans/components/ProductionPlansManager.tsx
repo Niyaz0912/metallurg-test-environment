@@ -1,4 +1,4 @@
-// frontend/src/features/users/components/ProductionPlansManager.tsx
+// frontend/src/features/productionPlans/components/ProductionPlansManager.tsx
 import React, { useState, useEffect } from 'react';
 
 interface ProductionPlan {
@@ -40,8 +40,8 @@ const ProductionPlansManager: React.FC<ProductionPlansManagerProps> = ({ onClose
         const data = await response.json();
         setPlans(data);
       }
-    } catch (error) {
-      console.error('Ошибка загрузки планов:', error);
+    } catch {  // ✅ ИСПРАВЛЕНО: убран параметр _error
+      console.error('Ошибка загрузки планов:');  // ✅ ИСПРАВЛЕНО: убран _error из console.error
     } finally {
       setLoading(false);
     }
@@ -65,8 +65,8 @@ const ProductionPlansManager: React.FC<ProductionPlansManagerProps> = ({ onClose
       } else {
         alert('Ошибка удаления плана');
       }
-    } catch (error) {
-      console.error('Ошибка удаления:', error);
+    } catch {  // ✅ ИСПРАВЛЕНО: убран параметр _error
+      console.error('Ошибка удаления:');  // ✅ ИСПРАВЛЕНО: убран _error из console.error
       alert('Ошибка соединения');
     }
   };
@@ -291,7 +291,7 @@ const ProductionPlanForm: React.FC<{
         const errorData = await response.json();
         setError(errorData.error || 'Ошибка сохранения');
       }
-    } catch (error) {
+    } catch {
       setError('Ошибка соединения с сервером');
     } finally {
       setLoading(false);

@@ -1,2 +1,2 @@
-export { default as TaskList } from './TaskList';
-export { default as TaskForm } from './TaskForm';
+export { default as TaskList } from './pages/TaskList';
+export { default as TaskForm } from './pages/TaskForm';

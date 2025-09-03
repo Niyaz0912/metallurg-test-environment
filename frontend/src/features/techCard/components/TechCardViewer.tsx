@@ -1,6 +1,6 @@
 // frontend/src/features/techCard/components/TechCardViewer.tsx
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../auth/hooks/useAuth';
+
 import { 
   fetchTechCardById, 
   addExecution, 
@@ -13,6 +13,7 @@ import {
   formatFileSize,
   getFileUrl // ← Импорт новой функции
 } from '../../../shared/api/techCardsApi';
+import { useAuth } from '../../auth/hooks/useAuth';
 
 interface TechCardViewerProps {
   techCard: TechCard;

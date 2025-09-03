@@ -1,5 +1,6 @@
 import React from 'react';
-import { Position } from '../types';
+
+import { Position } from '../../shared/types';
 
 interface PositionShelfProps {
   position: Position;

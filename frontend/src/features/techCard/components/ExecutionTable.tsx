@@ -1,5 +1,6 @@
 // frontend/src/features/techCard/components/ExecutionTable.tsx
 import React, { useState, useMemo } from 'react';
+
 import { 
   type TechCardExecution 
 } from '../../../shared/api/techCardsApi';
@@ -7,13 +8,11 @@ import {
 interface ExecutionTableProps {
   executions: TechCardExecution[];
   showFilters?: boolean;
-  compact?: boolean;
 }
 
 const ExecutionTable: React.FC<ExecutionTableProps> = ({
   executions,
-  showFilters = true,
-  compact = false
+  showFilters = true
 }) => {
   const [sortBy, setSortBy] = useState<'date' | 'executor' | 'quantity' | 'setup'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -62,14 +61,16 @@ const ExecutionTable: React.FC<ExecutionTableProps> = ({
         case 'date':
           comparison = new Date(a.executedAt).getTime() - new Date(b.executedAt).getTime();
           break;
-        case 'executor':
+        case 'executor': {
           const nameA = `${a.executor.firstName} ${a.executor.lastName}`;
           const nameB = `${b.executor.firstName} ${b.executor.lastName}`;
           comparison = nameA.localeCompare(nameB);
           break;
-        case 'quantity':
+        }
+        case 'quantity': {
           comparison = a.quantityProduced - b.quantityProduced;
           break;
+        }
         case 'setup':
           comparison = (a.setupNumber || 1) - (b.setupNumber || 1);
           break;

@@ -1,15 +1,16 @@
 // frontend/src/features/departments/DepartmentPortal.tsx
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { useAuth } from '../auth/hooks/useAuth';
+
+import { useAuth } from '../../auth/hooks/useAuth';
 
 // Импортируйте компоненты департаментов
-import AdministrativeMain from './sections/Administrative/AdministrativeMain';
-import CommercialMain from './sections/Commercial/CommercialMain';
-import FinancialMain from './sections/Financial/FinancialMain';
-import HRMain from './sections/HR/HRMain';
-import ProductionMain from './sections/Production/ProductionMain';
-import QualityMain from './sections/Quality/QualityMain';
+import AdministrativeMain from './AdministrativeMain';
+import CommercialMain from './CommercialMain';
+import FinancialMain from './FinancialMain';
+import HRMain from './HRMain';
+import ProductionMain from './ProductionMain';
+import QualityMain from './QualityMain';
 
 const DepartmentPortal: React.FC = () => {
   const { departmentId } = useParams<{ departmentId: string }>();

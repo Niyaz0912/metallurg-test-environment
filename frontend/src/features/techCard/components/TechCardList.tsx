@@ -1,5 +1,6 @@
 // frontend/src/features/techCard/components/TechCardList.tsx
 import React from 'react';
+
 import { 
   type TechCard,
   getTechCardProgress,

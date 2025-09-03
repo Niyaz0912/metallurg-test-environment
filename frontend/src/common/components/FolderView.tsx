@@ -1,6 +1,7 @@
-import React from 'react';
-import { DocumentFolder } from '../types';
 import { ArrowLeft } from 'lucide-react';
+import React from 'react';
+
+import { DocumentFolder } from '../../shared/types';
 
 interface FolderViewProps {
   folders: DocumentFolder[];

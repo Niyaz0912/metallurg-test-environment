@@ -1,15 +1,16 @@
 // frontend/src/features/techCard/components/TechCardForm.tsx
 import React, { useState } from 'react';
+
 import { 
   createTechCard, 
   updateTechCard,
   uploadPdf,
-  type TechCard,
+    type TechCard,
   type CreateTechCardData,
-  type UpdateTechCardData,
   type TechCardPriority,
   type TechCardStatus
 } from '../../../shared/api/techCardsApi';
+
 
 // ✅ ИСПРАВЛЕНО: Добавлен onClose и onSuccess в интерфейс
 interface TechCardFormProps {
@@ -18,6 +19,7 @@ interface TechCardFormProps {
   onClose: () => void; // ← Обязательный пропс
   onSuccess?: () => void; // ← Новый необязательный пропс
 }
+
 
 const TechCardForm: React.FC<TechCardFormProps> = ({ 
   techCard, 
@@ -40,6 +42,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
   });
   const [loading, setLoading] = useState(false);
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -47,6 +50,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
       alert('Заполните все обязательные поля');
       return;
     }
+
 
     try {
       setLoading(true);
@@ -58,13 +62,13 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
           customer: formData.customer,
           order: formData.order,
           productName: formData.productName,
-          partNumber: formData.partNumber || undefined,
+          partNumber: formData.partNumber,  // ✅ ИСПРАВЛЕНО: убрано || undefined
           quantity: Number(formData.quantity),
-          description: formData.description || undefined,
+          description: formData.description,  // ✅ ИСПРАВЛЕНО: убрано || undefined
           priority: formData.priority,
           status: formData.status,
-          plannedEndDate: formData.plannedEndDate || undefined,
-          notes: formData.notes || undefined
+          plannedEndDate: formData.plannedEndDate,  // ✅ ИСПРАВЛЕНО: убрано || undefined
+          notes: formData.notes  // ✅ ИСПРАВЛЕНО: убрано || undefined
         });
       } else {
         // Создаем новую техкарту
@@ -72,15 +76,16 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
           customer: formData.customer,
           order: formData.order,
           productName: formData.productName,
-          partNumber: formData.partNumber || undefined,
+          partNumber: formData.partNumber,  // ✅ ИСПРАВЛЕНО: убрано || undefined
           quantity: Number(formData.quantity),
-          description: formData.description || undefined,
+          description: formData.description,  // ✅ ИСПРАВЛЕНО: убрано || undefined
           priority: formData.priority,
           status: formData.status,
-          plannedEndDate: formData.plannedEndDate || undefined,
-          notes: formData.notes || undefined
+          plannedEndDate: formData.plannedEndDate,  // ✅ ИСПРАВЛЕНО: убрано || undefined
+          notes: formData.notes  // ✅ ИСПРАВЛЕНО: убрано || undefined
         });
       }
+
 
       // Загружаем PDF файл если выбран
       if (formData.file) {
@@ -92,11 +97,12 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
         }
       }
 
+
       // ✅ Используем onClose для закрытия формы
       onClose();
       
       // ✅ Вызываем onSuccess если передан
-      onSuccess && onSuccess();
+      if (onSuccess) { onSuccess(); }
       
     } catch (error) {
       console.error('Ошибка при сохранении:', error);
@@ -105,6 +111,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
       setLoading(false);
     }
   };
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -121,6 +128,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
     }
   };
 
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -136,6 +144,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
             ✕
           </button>
         </div>
+
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -157,6 +166,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
                 />
               </div>
 
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Номер заказа *
@@ -170,6 +180,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
                   required
                 />
               </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -185,6 +196,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
                 />
               </div>
 
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Артикул
@@ -197,6 +209,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
                   placeholder="Введите артикул (опционально)"
                 />
               </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -212,6 +225,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
                 />
               </div>
             </div>
+
 
             {/* Дополнительные параметры */}
             <div className="space-y-4">
@@ -232,6 +246,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
                 </select>
               </div>
 
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Приоритет
@@ -248,6 +263,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
                 </select>
               </div>
 
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Плановая дата завершения
@@ -259,6 +275,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -287,6 +304,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
             </div>
           </div>
 
+
           {/* Описание и заметки */}
           <div className="space-y-4">
             <h4 className="font-medium text-gray-900 border-b pb-2">📄 Дополнительная информация</h4>
@@ -304,6 +322,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
               />
             </div>
 
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Заметки
@@ -317,6 +336,7 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
               />
             </div>
           </div>
+
 
           {/* Кнопки */}
           <div className="flex justify-end space-x-3 pt-4 border-t">
@@ -342,4 +362,6 @@ const TechCardForm: React.FC<TechCardFormProps> = ({
   );
 };
 
+
 export default TechCardForm;
+

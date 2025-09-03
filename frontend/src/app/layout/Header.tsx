@@ -1,7 +1,8 @@
 // frontend/src/app/layout/Header.tsx
 import React from 'react';
-import { useAuth } from '../../features/auth/hooks/useAuth';
 import { Link, useNavigate } from 'react-router-dom';
+
+import { useAuth } from '../../features/auth/hooks/useAuth';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();

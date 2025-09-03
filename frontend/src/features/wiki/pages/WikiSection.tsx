@@ -1,13 +1,16 @@
 // frontend/src/components/WikiSection.tsx
 
 import React, { useState, useMemo } from 'react';
-import Sidebar from '../../app/layout/Sidebar';
-import { PositionShelf } from '../../components/PositionShelf';
-import { FolderView } from '../../components/FolderView';
-import { WikiCard } from './components/WikiCard';
-import { WikiModal } from './components/WikiModal';
-import { positions } from '../../data/mockData';
-import { Position, DocumentFolder, WikiPage } from '../../types';
+
+import Sidebar from '../../../app/layout/Sidebar';
+import { FolderView } from '../../../common/components/FolderView';
+import { PositionShelf } from '../../../common/components/PositionShelf';
+import { positions } from '../../../data/mockData';
+import { Position, DocumentFolder, WikiPage } from '../../../shared/types';
+
+import { WikiCard } from '../components/WikiCard';
+import { WikiModal } from '../components/WikiModal';
+
 
 type ViewType = 'positions' | 'folders' | 'documents';
 
@@ -49,12 +52,6 @@ const WikiSection: React.FC = () => {
     setSearchQuery('');
   };
 
-  const handleBackToFolders = () => {
-    setCurrentView('folders');
-    setSelectedFolder(null);
-    setSearchQuery('');
-  };
-
   const handlePageClick = (page: WikiPage) => {
     setSelectedPage(page);
     setIsModalOpen(true);
@@ -63,22 +60,6 @@ const WikiSection: React.FC = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedPage(null);
-  };
-
-  const getBreadcrumb = () => {
-    if (currentView === 'folders' && selectedPosition) {
-      return `${selectedPosition.name} → ${selectedPosition.department}`;
-    }
-    if (currentView === 'documents' && selectedPosition && selectedFolder) {
-      return `${selectedPosition.name} → ${selectedFolder.name}`;
-    }
-    return '';
-  };
-
-  const getBackHandler = () => {
-    if (currentView === 'folders') return handleBackToPositions;
-    if (currentView === 'documents') return handleBackToFolders;
-    return undefined;
   };
 
   return (
