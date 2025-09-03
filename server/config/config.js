@@ -25,6 +25,7 @@ module.exports = {
     host: process.env.MYSQLHOST,
     port: process.env.MYSQLPORT,
     dialect: 'mysql',
+    charset: 'utf8mb4',
     dialectOptions: {
       ssl: {
         require: true,

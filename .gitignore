@@ -112,3 +112,4 @@ yarn.lock.backup
 !.yarn/sdks
 !.yarn/versions
 
+.gemini_project_context.md

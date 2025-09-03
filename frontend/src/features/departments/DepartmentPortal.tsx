@@ -28,11 +28,11 @@ const DepartmentPortal: React.FC = () => {
   // Маппинг департаментов к компонентам
   const departmentComponents: { [key: string]: React.ComponentType } = {
     '1': AdministrativeMain,
-    '2': CommercialMain,
-    '3': FinancialMain,
-    '4': HRMain,
+    '2': HRMain,
+    '3': QualityMain,
+    '4': CommercialMain,
     '5': ProductionMain,
-    '6': QualityMain,
+    '6': FinancialMain,
   };
 
   const DepartmentComponent = departmentComponents[departmentId || ''];
