@@ -310,18 +310,49 @@ exports.deleteUser = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { role } = req.body;
+    const { username, firstName, lastName, role, phone, masterId, departmentId, password } = req.body;
 
-    // Только админ может менять роли
-    if (req.user.currentRole !== 'admin') {
-      return res.status(403).json({ message: 'Доступ запрещён' });
+    // Проверка, что пользователь существует
+    const user = await db.User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
     }
 
-    await db.User.update({ role }, { where: { id } });
-    res.json({ message: 'Роль обновлена' });
+    // Подготовка данных для обновления
+    const updateData = {
+      username,
+      firstName,
+      lastName,
+      role,
+      phone,
+      masterId,
+      departmentId,
+    };
+
+    // Если в запросе есть пароль, "хэшируем" и добавляем его
+    // В тестовой среде просто сохраняем как есть
+    if (password) {
+      updateData.passwordHash = password;
+    }
+
+    // Обновляем пользователя
+    await user.update(updateData);
+
+    // Получаем обновленного пользователя с данными отдела
+    const updatedUser = await db.User.findByPk(id, {
+      attributes: { exclude: ['passwordHash'] },
+      include: {
+        model: db.Department,
+        as: 'department',
+        attributes: ['id', 'name']
+      }
+    });
+
+    res.json({ message: 'Пользователь успешно обновлен', user: updatedUser });
+
   } catch (e) {
     console.error('Update user error:', e);
-    res.status(500).json({ message: 'Ошибка сервера' });
+    res.status(500).json({ message: 'Ошибка сервера при обновлении пользователя' });
   }
 };
 

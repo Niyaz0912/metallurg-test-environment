@@ -17,7 +17,7 @@ router.get('/me', authMiddleware, userController.getMe);
 router.get('/', authMiddleware, roleMiddleware(['admin']), userController.getAllUsers);
 
 // PATCH /api/users/:id/role — обновление роли (только admin)
-router.patch('/:id/role', authMiddleware, roleMiddleware(['admin']), userController.updateUserRole);
+router.put('/:id', authMiddleware, roleMiddleware(['admin']), userController.updateUser);
 
 // DELETE /api/users/:id — удаление пользователя (только admin)
 router.delete('/:id', authMiddleware, roleMiddleware(['admin']), userController.deleteUser);

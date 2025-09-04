@@ -22,7 +22,7 @@ interface Department {
 
 interface UserEditFormProps {
   user: User;
-  onUserUpdated: () => void;
+  onUserUpdated: (user: User) => void;
   onCancel: () => void;
 }
 
@@ -30,9 +30,11 @@ const UserEditForm: React.FC<UserEditFormProps> = ({ user, onUserUpdated, onCanc
   const [formData, setFormData] = useState({
     firstName: user.firstName,
     lastName: user.lastName,
+    username: user.username, // Add username
     role: user.role,
     phone: user.phone || '',
-    departmentId: user.departmentId.toString()
+    departmentId: user.departmentId.toString(),
+    password: '' // Add password field (optional)
   });
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,7 +71,7 @@ const UserEditForm: React.FC<UserEditFormProps> = ({ user, onUserUpdated, onCanc
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/users/${user.id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -81,7 +83,8 @@ const UserEditForm: React.FC<UserEditFormProps> = ({ user, onUserUpdated, onCanc
       });
 
       if (response.ok) {
-        onUserUpdated();
+        const updatedUserResponse = await response.json();
+        onUserUpdated(updatedUserResponse.user);
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Ошибка обновления пользователя');
@@ -132,6 +135,18 @@ const UserEditForm: React.FC<UserEditFormProps> = ({ user, onUserUpdated, onCanc
           </div>
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Логин</label>
+          <input
+            type="text"
+            name="username"
+            value={formData.username}
+            onChange={handleChange}
+            required
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+          />
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Роль</label>
@@ -171,6 +186,17 @@ const UserEditForm: React.FC<UserEditFormProps> = ({ user, onUserUpdated, onCanc
             type="tel"
             name="phone"
             value={formData.phone}
+            onChange={handleChange}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Пароль (оставьте пустым, чтобы не менять)</label>
+          <input
+            type="password"
+            name="password"
+            value={formData.password}
             onChange={handleChange}
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
           />

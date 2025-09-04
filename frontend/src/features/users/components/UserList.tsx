@@ -12,14 +12,16 @@ interface User {
     id: number;
     name: string;
   } | null;
+  departmentId: number; // Add departmentId
 }
 
 interface UserListProps {
   users: User[];
   onUserDeleted: () => void;
+  onEditUser: (user: User) => void; // Добавляем пропс для редактирования
 }
 
-const UserList: React.FC<UserListProps> = ({ users, onUserDeleted }) => {
+const UserList: React.FC<UserListProps> = ({ users, onUserDeleted, onEditUser }) => {
   const handleDeleteUser = async (userId: number) => {
     if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) {
       return;
@@ -136,6 +138,12 @@ const UserList: React.FC<UserListProps> = ({ users, onUserDeleted }) => {
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button
+                  onClick={() => onEditUser(user)}
+                  className="text-indigo-600 hover:text-indigo-900 mr-4"
+                >
+                  Редактировать
+                </button>
                 <button
                   onClick={() => handleDeleteUser(user.id)}
                   className="text-red-600 hover:text-red-900"

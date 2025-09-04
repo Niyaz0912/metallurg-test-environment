@@ -5,6 +5,8 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import ProductionPlansManager from '../../productionPlans/components/ProductionPlansManager';
 import UserCreateForm from '../components/UserCreateForm';
 import UserList from '../components/UserList';
+import UserEditForm from '../components/UserEditForm'; // Import UserEditForm
+import { updateUser } from '../../../shared/api/users'; // Import updateUser API function
 // ✅ Правильный импорт из техкарт
 import TechCardsManager from '../../techCard/components/TechCardsManager';
 
@@ -19,6 +21,7 @@ interface User {
     id: number;
     name: string;
   } | null;
+  departmentId: number; // Add departmentId
 }
 
 const AdminPanel: React.FC = () => {
@@ -27,6 +30,8 @@ const AdminPanel: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [activeSection, setActiveSection] = useState<'users' | 'plans' | 'techcards'>('users');
+  const [editingUser, setEditingUser] = useState<User | null>(null); // State for user being edited
+  const [showEditModal, setShowEditModal] = useState(false); // State for edit modal visibility
 
   useEffect(() => {
     fetchUsers();
@@ -64,6 +69,30 @@ const AdminPanel: React.FC = () => {
 
   const handleUserDeleted = () => {
     fetchUsers(); // Refresh the user list
+  };
+
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = async (updatedUserData: User) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Ошибка: Токен авторизации отсутствует.');
+        return;
+      }
+      // Call the API function
+      await updateUser(updatedUserData.id, updatedUserData, token);
+      alert('Пользователь успешно обновлен!');
+      setShowEditModal(false); // Close modal
+      setEditingUser(null); // Clear editing user
+      fetchUsers(); // Refresh the list
+    } catch (error: any) {
+      console.error('Ошибка обновления пользователя:', error);
+      alert(`Ошибка обновления пользователя: ${error.message || 'Неизвестная ошибка'}`);
+    }
   };
 
   // Проверка прав доступа
@@ -157,7 +186,28 @@ const AdminPanel: React.FC = () => {
             <UserList 
               users={users} 
               onUserDeleted={handleUserDeleted}
+              onEditUser={handleEditUser} // Pass the new handler
             />
+          </div>
+        )}
+
+        {/* Edit User Modal */}
+        {showEditModal && editingUser && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50">
+            <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full relative">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-xl"
+              >
+                &times;
+              </button>
+              <h2 className="text-2xl font-bold mb-6 text-center">Редактировать пользователя</h2>
+              <UserEditForm
+                user={editingUser}
+                onUserUpdated={handleUpdateUser}
+                onCancel={() => setShowEditModal(false)}
+              />
+            </div>
           </div>
         )}
 
