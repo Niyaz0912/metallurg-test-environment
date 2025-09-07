@@ -49,20 +49,8 @@ const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PR
 // Глобальный CORS
 app.use(cors());
 
-// ✅ Глобальная обработка preflight для всех путей (OPTIONS) — Express 5: используем '/*'
+// ✅ Глобальная обработка preflight для всех путей (OPTIONS)
 app.options('/*', cors());
-
-// ✅ НОРМАЛИЗАЦИЯ ПУТЕЙ API (горячий фикс двойного префикса)
-app.use((req, res, next) => {
-  const before = req.url;
-  if (req.url.startsWith('/api/api/')) req.url = req.url.replace('/api/api/', '/api/');
-  if (req.url.startsWith('/api//')) req.url = req.url.replace('/api//', '/api/');
-  if (req.url.startsWith('/api/')) req.url = req.url.replace(/\/{2,}/g, '/');
-  if (before !== req.url && (process.env.DEBUG_REQUESTS === 'true' || !isProduction)) {
-    console.log(`🔁 URL rewritten: ${before} -> ${req.url}`);
-  }
-  next();
-});
 
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
@@ -97,9 +85,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- ПРАВИЛЬНЫЙ ПОРЯДОК ---
+// --- НОВАЯ АРХИТЕКТУРА API РОУТОВ ---
 
-// 1. API-роуты
+// ✅ Создаём API роутер для централизованного управления
+const apiRouter = express.Router();
+
+// Импорт всех роутов
 const departmentRoutes = require('./department/departmentRoutes');
 const userRoutes = require('./users/userRoutes');
 const assignmentRoutes = require('./assignments/assignmentRoutes');
@@ -107,14 +98,16 @@ const taskRoutes = require('./tasks/taskRoutes');
 const techCardRoutes = require('./techCards/techCardRoutes');
 const productionPlanRoutes = require('./productionPlans/productionPlanRoutes');
 
-app.use('/api/departments', departmentRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/assignments', assignmentRoutes);
-app.use('/api/tasks', taskRoutes);
-app.use('/api/techcards', techCardRoutes);
-app.use('/api/productionPlans', productionPlanRoutes);
+// ✅ Подключаем все роуты к API роутеру БЕЗ префикса /api/
+apiRouter.use('/departments', departmentRoutes);
+apiRouter.use('/users', userRoutes);
+apiRouter.use('/assignments', assignmentRoutes);
+apiRouter.use('/tasks', taskRoutes);
+apiRouter.use('/techcards', techCardRoutes);
+apiRouter.use('/productionPlans', productionPlanRoutes);
 
-app.get('/api/health', (req, res) => {
+// ✅ API эндпоинты перенесены в API роутер
+apiRouter.get('/health', (req, res) => {
   res.json({
     status: 'OK',
     environment: process.env.NODE_ENV || 'development',
@@ -125,7 +118,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('/api', (req, res) => {
+apiRouter.get('/', (req, res) => {
   res.json({
     message: 'Metallurg API Server',
     version: '1.0.0',
@@ -143,6 +136,18 @@ app.get('/api', (req, res) => {
   });
 });
 
+// ✅ Подключаем API роутер с единым префиксом /api
+app.use('/api', apiRouter);
+
+// Railway health check (вне API роутера)
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    service: 'Metallurg API',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // 2. Раздача фронтенда
 const frontendBuildPath = path.join(__dirname, '..', 'frontend', 'dist');
 if (isProduction || isRailway) {
@@ -153,7 +158,7 @@ if (isProduction || isRailway) {
     console.log('⚠️ Frontend build not found at', frontendBuildPath);
   }
 
-  // 3. SPA-fallback — Express 5 требует '/*' или RegExp
+  // 3. SPA-fallback
   app.get('/*', (req, res) => {
     const frontendIndexPath = path.join(frontendBuildPath, 'index.html');
     if (fs.existsSync(frontendIndexPath)) {
@@ -167,25 +172,39 @@ if (isProduction || isRailway) {
   });
 }
 
-// Ошибки
+// Обработка ошибок
 app.use((err, req, res, next) => {
   const errorId = Date.now().toString(36);
   const isProd = process.env.NODE_ENV === 'production';
+  
   if (!isProd) {
     console.error('🚨 Ошибка сервера:', err.message);
     console.error('Stack:', err.stack);
   } else {
     console.error(`🚨 Ошибка [${errorId}]:`, err.message);
   }
+  
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ error: 'Файл слишком большой', message: 'Максимальный размер файла: 10MB' });
+    return res.status(413).json({ 
+      error: 'Файл слишком большой', 
+      message: 'Максимальный размер файла: 10MB' 
+    });
   }
+  
   if (err.name === 'SequelizeValidationError') {
-    return res.status(400).json({ error: 'Ошибка валидации данных', message: isProd ? 'Неверные данные' : err.message });
+    return res.status(400).json({ 
+      error: 'Ошибка валидации данных', 
+      message: isProd ? 'Неверные данные' : err.message 
+    });
   }
+  
   if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
-    return res.status(401).json({ error: 'Ошибка авторизации', message: 'Необходимо войти в систему заново' });
+    return res.status(401).json({ 
+      error: 'Ошибка авторизации', 
+      message: 'Необходимо войти в систему заново' 
+    });
   }
+  
   const statusCode = err.statusCode || err.status || 500;
   res.status(statusCode).json({
     error: isProd ? 'Internal Server Error' : err.name || 'Server Error',
@@ -196,11 +215,22 @@ app.use((err, req, res, next) => {
 
 async function startServer() {
   try {
+    console.log('🔍 DEBUG: Environment detection');
+    console.log('NODE_ENV from process.env:', process.env.NODE_ENV);
+    console.log('RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT_NAME);
+    console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
+    console.log('MYSQLHOST:', process.env.MYSQLHOST ? 'SET' : 'NOT SET');
+    console.log('MYSQLDATABASE:', process.env.MYSQLDATABASE);
+
     await db.sequelize.authenticate();
     console.log('✅ Database connection established');
 
     if (!isProduction) {
       console.log('🔄 Development mode: Database sync disabled');
+    } else {
+      console.log('🔄 Creating tables automatically...');
+      await db.sequelize.sync();
+      console.log('✅ Database connection established');
     }
 
     const server = app.listen(PORT, '0.0.0.0', () => {
@@ -213,6 +243,8 @@ async function startServer() {
       } else {
         console.log(`🏠 Local URL: http://localhost:${PORT}`);
       }
+      console.log('✅ API Routes configured with centralized router');
+      console.log('🔧 Fixed duplicate /api/api/ issue');
     });
 
     const gracefulShutdown = (signal) => {
@@ -254,4 +286,5 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 module.exports = app;
+
 
