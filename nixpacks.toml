@@ -1,9 +1,9 @@
 # nixpacks.toml
 
 [phases.build]
-# Устанавливаем зависимости на этапе сборки
-cmds = ["cd server && npm ci --production"]
+# Сборка фронтенда на уже установленных зависимостях (root npm ci делает Nixpacks)
+cmds = ["cd frontend && npm run build"]
 
 [start]
-# Только миграции и запуск
+# Миграции + запуск сервера
 cmd = "cd server && npx sequelize-cli db:migrate && npm start"
