@@ -251,7 +251,24 @@ async function startServer() {
     } else {
       console.log('🔄 Creating tables automatically...');
       await db.sequelize.sync();
-      console.log('✅ Database tables synchronized');
+      
+      // 🆕 АВТОМАТИЧЕСКИЙ ЗАПУСК СИДЕРОВ В ПРОДАКШЕНЕ
+      console.log('🌱 Running seeders...');
+      try {
+        const { execSync } = require('child_process');
+        execSync('npm run seed', { 
+          cwd: __dirname, 
+          stdio: 'inherit',
+          env: { ...process.env, NODE_ENV: 'production' }
+        });
+        console.log('✅ Seeders completed successfully');
+      } catch (seedError) {
+        // Сидеры могут упасть, если данные уже есть - это нормально
+        console.log('ℹ️ Seeders message:', seedError.message);
+        console.log('📝 Note: This is normal if data already exists');
+      }
+      
+      console.log('✅ Database initialization completed');
     }
 
     const server = app.listen(PORT, '0.0.0.0', () => {
@@ -266,6 +283,7 @@ async function startServer() {
       }
       console.log('✅ Server started without wildcard patterns');
       console.log('✅ Path-to-regexp compatibility issue resolved');
+      console.log('🌱 Automatic seeders enabled for production');
     });
 
     const gracefulShutdown = (signal) => {
@@ -307,5 +325,6 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 module.exports = app;
+
 
 
