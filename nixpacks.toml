@@ -1,9 +1,9 @@
 # nixpacks.toml
 
 [phases.build]
-# Пропускаем шаг сборки, все будет на этапе запуска
-cmds = ["echo 'Build step skipped, installing at runtime'"]
+# Устанавливаем зависимости на этапе сборки
+cmds = ["cd server && npm ci --production"]
 
 [start]
-# Установка, миграция и запуск - все в одной команде для надежности
-cmd = "cd server && npm install && npx sequelize-cli db:migrate && npm start"
+# Только миграции и запуск
+cmd = "cd server && npx sequelize-cli db:migrate && npm start"
