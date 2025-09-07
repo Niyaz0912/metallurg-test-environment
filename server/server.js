@@ -5,21 +5,21 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 // ✅ ФИКС ДЛЯ RAILWAY - Правильная обработка PORT
 const PORT = (() => {
   let port = process.env.PORT;
-  
+
   // Если PORT не установлен, используем 3001
   if (!port) return 3001;
-  
+
   // Если PORT это строка, преобразуем в число
   if (typeof port === 'string') {
     port = parseInt(port, 10);
   }
-  
+
   // Проверяем валидность порта
   if (isNaN(port) || port < 0 || port > 65535) {
     console.warn('⚠️ Invalid PORT, using default 3001');
     return 3001;
   }
-  
+
   return port;
 })();
 
@@ -55,10 +55,35 @@ if (!fs.existsSync(uploadsDir)) {
 const isProduction = process.env.NODE_ENV === 'production';
 const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_NAME;
 
+// Глобальный CORS
 app.use(cors());
 
-// ✅ ИСПРАВЛЕНИЕ: Обработка preflight запросов с именованным параметром
-app.options('*catchall', cors());
+// ✅ Глобальная обработка preflight для всех путей (OPTIONS)
+app.options('*', cors());
+
+// ✅ НОРМАЛИЗАЦИЯ ПУТЕЙ API (горячий фикс двойного префикса)
+// Убираем повторные /api/ в начале пути: /api/api/... -> /api/...
+app.use((req, res, next) => {
+  const before = req.url;
+  // Пока что правим только начальные повторы
+  // 1) /api/api/... -> /api/...
+  if (req.url.startsWith('/api/api/')) {
+    req.url = req.url.replace('/api/api/', '/api/');
+  }
+  // 2) /api//... -> /api/...
+  if (req.url.startsWith('/api//')) {
+    req.url = req.url.replace('/api//', '/api/');
+  }
+  // 3) Мягкая нормализация: заменить повторяющиеся слеши внутри /api/
+  if (req.url.startsWith('/api/')) {
+    req.url = req.url.replace(/\/{2,}/g, '/');
+  }
+
+  if (before !== req.url && (process.env.DEBUG_REQUESTS === 'true' || !isProduction)) {
+    console.log(`🔁 URL rewritten: ${before} -> ${req.url}`);
+  }
+  next();
+});
 
 // Middleware для парсинга данных
 app.use(express.json({ limit: '10mb' }));
@@ -71,33 +96,33 @@ app.use('/api/files', express.static(path.join(__dirname, 'uploads')));
 
 // ✅ ОПТИМИЗИРОВАННОЕ ЛОГИРОВАНИЕ
 app.use((req, res, next) => {
-  const isProduction = process.env.NODE_ENV === 'production';
-  
-  if (!isProduction || process.env.DEBUG_REQUESTS === 'true') {
+  const isProd = process.env.NODE_ENV === 'production';
+
+  if (!isProd || process.env.DEBUG_REQUESTS === 'true') {
     const timestamp = new Date().toISOString();
     console.log(`[${timestamp}] ${req.method} ${req.url}`);
-    
-    if (!isProduction && req.body && Object.keys(req.body).length > 0) {
+
+    if (!isProd && req.body && Object.keys(req.body).length > 0) {
       const sanitizedBody = { ...req.body };
       if (sanitizedBody.password) sanitizedBody.password = '[HIDDEN]';
       if (sanitizedBody.token) sanitizedBody.token = '[HIDDEN]';
       console.log(`  📦 Body:`, sanitizedBody);
     }
   }
-  
+
   const startTime = Date.now();
   res.on('finish', () => {
-    if (!isProduction || process.env.DEBUG_REQUESTS === 'true') {
+    if (!isProd || process.env.DEBUG_REQUESTS === 'true') {
       const duration = Date.now() - startTime;
       const statusColor = res.statusCode >= 400 ? '🔴' : res.statusCode >= 300 ? '🟡' : '🟢';
       console.log(`  ${statusColor} ${res.statusCode} - ${duration}ms`);
     }
   });
-  
+
   next();
 });
 
-// --- ПРАВИЛЬНЫЙ ПОРЯДОК --- 
+// --- ПРАВИЛЬНЫЙ ПОРЯДОК ---
 
 // 1. Сначала ВСЕ API-роуты
 const departmentRoutes = require('./department/departmentRoutes');
@@ -114,6 +139,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/techcards', techCardRoutes);
 app.use('/api/productionPlans', productionPlanRoutes);
 
+// Диагностический эндпоинт
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -154,7 +180,7 @@ if (isProduction || isRailway) {
   }
 
   // 3. И только в самом конце — Fallback для SPA (отдает index.html для всех остальных GET запросов)
-  app.get('*catchall', (req, res) => {
+  app.get('*', (req, res) => {
     const frontendIndexPath = path.join(frontendBuildPath, 'index.html');
     if (fs.existsSync(frontendIndexPath)) {
       res.sendFile(frontendIndexPath);
@@ -170,9 +196,9 @@ if (isProduction || isRailway) {
 // ✅ УПРОЩЕННАЯ ОБРАБОТКА ОШИБОК
 app.use((err, req, res, next) => {
   const errorId = Date.now().toString(36);
-  const isProduction = process.env.NODE_ENV === 'production';
-  
-  if (!isProduction) {
+  const isProd = process.env.NODE_ENV === 'production';
+
+  if (!isProd) {
     console.error('🚨 Ошибка сервера:', err.message);
     console.error('Stack:', err.stack);
   } else {
@@ -189,7 +215,7 @@ app.use((err, req, res, next) => {
   if (err.name === 'SequelizeValidationError') {
     return res.status(400).json({
       error: 'Ошибка валидации данных',
-      message: isProduction ? 'Неверные данные' : err.message
+      message: isProd ? 'Неверные данные' : err.message
     });
   }
 
@@ -201,10 +227,10 @@ app.use((err, req, res, next) => {
   }
 
   const statusCode = err.statusCode || err.status || 500;
-  
+
   res.status(statusCode).json({
-    error: isProduction ? 'Internal Server Error' : err.name || 'Server Error',
-    message: isProduction ? 'Что-то пошло не так. Попробуйте позже.' : err.message,
+    error: isProd ? 'Internal Server Error' : err.name || 'Server Error',
+    message: isProd ? 'Что-то пошло не так. Попробуйте позже.' : err.message,
     ...(process.env.DEBUG === 'true' && { errorId })
   });
 });
@@ -224,11 +250,11 @@ async function startServer() {
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      
-      const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_NAME;
-      console.log(`🌐 Railway: ${isRailway ? 'Yes' : 'No'}`);
-      
-      if (isRailway) {
+
+      const railwayEnv = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_NAME;
+      console.log(`🌐 Railway: ${railwayEnv ? 'Yes' : 'No'}`);
+
+      if (railwayEnv) {
         console.log(`🔗 Railway URL: https://${process.env.RAILWAY_PROJECT_NAME || 'app'}.up.railway.app`);
       } else {
         console.log(`🏠 Local URL: http://localhost:${PORT}`);
@@ -238,7 +264,7 @@ async function startServer() {
     // ✅ Graceful shutdown
     const gracefulShutdown = (signal) => {
       console.log(`🛑 ${signal} received. Shutting down gracefully...`);
-      
+
       server.close(async () => {
         try {
           await db.sequelize.close();
@@ -257,7 +283,6 @@ async function startServer() {
 
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-
   } catch (err) {
     console.error('❌ Server startup failed:', err.message);
     process.exit(1);
@@ -279,3 +304,4 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 module.exports = app;
+
