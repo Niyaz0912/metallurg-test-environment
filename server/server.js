@@ -46,11 +46,13 @@ if (!fs.existsSync(uploadsDir)) {
 const isProduction = process.env.NODE_ENV === 'production';
 const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_NAME;
 
-// Глобальный CORS
-app.use(cors());
-
-// ✅ Глобальная обработка preflight для всех путей
-app.options('*', cors());
+// ✅ УПРОЩЁННЫЙ CORS - без проблемных паттернов
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // ✅ ИСПРАВЛЕННАЯ НОРМАЛИЗАЦИЯ ПУТЕЙ API
 app.use((req, res, next) => {
@@ -171,13 +173,14 @@ if (isProduction || isRailway) {
     console.log('⚠️ Frontend build not found at', frontendBuildPath);
   }
 
-  // ✅ ИСПРАВЛЕН SPA-fallback - используем простой * вместо /*
-  app.get('*', (req, res) => {
+  // ✅ БЕЗОПАСНЫЙ SPA-fallback БЕЗ WILDCARDS
+  app.use((req, res, next) => {
     // Пропускаем API запросы
     if (req.url.startsWith('/api/')) {
       return res.status(404).json({ error: 'API endpoint not found' });
     }
     
+    // Для всех остальных запросов отдаём index.html
     const frontendIndexPath = path.join(frontendBuildPath, 'index.html');
     if (fs.existsSync(frontendIndexPath)) {
       res.sendFile(frontendIndexPath);
@@ -261,8 +264,8 @@ async function startServer() {
       } else {
         console.log(`🏠 Local URL: http://localhost:${PORT}`);
       }
-      console.log('✅ Fixed path-to-regexp compatibility issue');
-      console.log('✅ API routes working correctly');
+      console.log('✅ Server started without wildcard patterns');
+      console.log('✅ Path-to-regexp compatibility issue resolved');
     });
 
     const gracefulShutdown = (signal) => {
