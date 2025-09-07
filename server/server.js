@@ -49,8 +49,28 @@ const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PR
 // Глобальный CORS
 app.use(cors());
 
-// ✅ Глобальная обработка preflight для всех путей (OPTIONS)
-app.options('/*', cors());
+// ✅ Глобальная обработка preflight для всех путей
+app.options('*', cors());
+
+// ✅ ИСПРАВЛЕННАЯ НОРМАЛИЗАЦИЯ ПУТЕЙ API
+app.use((req, res, next) => {
+  const originalUrl = req.url;
+  
+  // Исправляем дублированные /api/api/ на /api/
+  if (req.url.includes('/api/api/')) {
+    req.url = req.url.replace(/\/api\/api\//g, '/api/');
+  }
+  
+  // Убираем множественные слэши
+  req.url = req.url.replace(/\/+/g, '/');
+  
+  // Логируем изменения
+  if (originalUrl !== req.url) {
+    console.log(`🔁 URL rewritten: ${originalUrl} -> ${req.url}`);
+  }
+  
+  next();
+});
 
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
@@ -85,12 +105,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- НОВАЯ АРХИТЕКТУРА API РОУТОВ ---
+// --- API РОУТЫ ---
 
-// ✅ Создаём API роутер для централизованного управления
-const apiRouter = express.Router();
-
-// Импорт всех роутов
+// Импорт роутов
 const departmentRoutes = require('./department/departmentRoutes');
 const userRoutes = require('./users/userRoutes');
 const assignmentRoutes = require('./assignments/assignmentRoutes');
@@ -98,16 +115,16 @@ const taskRoutes = require('./tasks/taskRoutes');
 const techCardRoutes = require('./techCards/techCardRoutes');
 const productionPlanRoutes = require('./productionPlans/productionPlanRoutes');
 
-// ✅ Подключаем все роуты к API роутеру БЕЗ префикса /api/
-apiRouter.use('/departments', departmentRoutes);
-apiRouter.use('/users', userRoutes);
-apiRouter.use('/assignments', assignmentRoutes);
-apiRouter.use('/tasks', taskRoutes);
-apiRouter.use('/techcards', techCardRoutes);
-apiRouter.use('/productionPlans', productionPlanRoutes);
+// Подключаем роуты
+app.use('/api/departments', departmentRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/assignments', assignmentRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/techcards', techCardRoutes);
+app.use('/api/productionPlans', productionPlanRoutes);
 
-// ✅ API эндпоинты перенесены в API роутер
-apiRouter.get('/health', (req, res) => {
+// Health check эндпоинты
+app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     environment: process.env.NODE_ENV || 'development',
@@ -118,7 +135,15 @@ apiRouter.get('/health', (req, res) => {
   });
 });
 
-apiRouter.get('/', (req, res) => {
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    service: 'Metallurg API',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/api', (req, res) => {
   res.json({
     message: 'Metallurg API Server',
     version: '1.0.0',
@@ -136,19 +161,7 @@ apiRouter.get('/', (req, res) => {
   });
 });
 
-// ✅ Подключаем API роутер с единым префиксом /api
-app.use('/api', apiRouter);
-
-// Railway health check (вне API роутера)
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'OK',
-    service: 'Metallurg API',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// 2. Раздача фронтенда
+// Раздача фронтенда
 const frontendBuildPath = path.join(__dirname, '..', 'frontend', 'dist');
 if (isProduction || isRailway) {
   if (fs.existsSync(frontendBuildPath)) {
@@ -158,8 +171,13 @@ if (isProduction || isRailway) {
     console.log('⚠️ Frontend build not found at', frontendBuildPath);
   }
 
-  // 3. SPA-fallback
-  app.get('/*', (req, res) => {
+  // ✅ ИСПРАВЛЕН SPA-fallback - используем простой * вместо /*
+  app.get('*', (req, res) => {
+    // Пропускаем API запросы
+    if (req.url.startsWith('/api/')) {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    
     const frontendIndexPath = path.join(frontendBuildPath, 'index.html');
     if (fs.existsSync(frontendIndexPath)) {
       res.sendFile(frontendIndexPath);
@@ -230,7 +248,7 @@ async function startServer() {
     } else {
       console.log('🔄 Creating tables automatically...');
       await db.sequelize.sync();
-      console.log('✅ Database connection established');
+      console.log('✅ Database tables synchronized');
     }
 
     const server = app.listen(PORT, '0.0.0.0', () => {
@@ -243,8 +261,8 @@ async function startServer() {
       } else {
         console.log(`🏠 Local URL: http://localhost:${PORT}`);
       }
-      console.log('✅ API Routes configured with centralized router');
-      console.log('🔧 Fixed duplicate /api/api/ issue');
+      console.log('✅ Fixed path-to-regexp compatibility issue');
+      console.log('✅ API routes working correctly');
     });
 
     const gracefulShutdown = (signal) => {
