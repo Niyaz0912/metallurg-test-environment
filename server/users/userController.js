@@ -1,8 +1,6 @@
 const db = require('../models');
-// const bcrypt = require('bcrypt'); // ОТКЛЮЧЕНО для тестовой среды
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
-const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 // Получить всех пользователей (только для админа)
@@ -23,6 +21,7 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
+// Регистрация пользователя
 exports.register = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -30,7 +29,17 @@ exports.register = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { username, password, firstName, lastName, role, phone, masterId, departmentId } = req.body;
+    const { 
+      username, 
+      password, 
+      firstName, 
+      lastName, 
+      role, 
+      phone, 
+      masterId, 
+      departmentId, 
+      position // ✅ ДОБАВЛЕНО: поле position
+    } = req.body;
 
     // Проверка существования отдела
     const department = await db.Department.findByPk(departmentId);
@@ -44,11 +53,8 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Пользователь с таким именем уже существует' });
     }
 
-    // ❌ ОТКЛЮЧЕНО: Хэширование пароля для тестовой среды
-    // const passwordHash = await bcrypt.hash(password, 10);
-
-    // ✅ ТЕСТОВАЯ СРЕДА: Сохраняем пароль как есть
-    const passwordHash = password; // простой текст для тестов
+    // ✅ УПРОЩЕНО: для тестовой среды сохраняем пароль как есть
+    const passwordHash = password;
 
     // Создание пользователя
     const user = await db.User.create({
@@ -59,7 +65,8 @@ exports.register = async (req, res) => {
       role,
       phone,
       masterId,
-      departmentId
+      departmentId,
+      position // ✅ ДОБАВЛЕНО
     });
 
     // Не возвращаем хэш пароля в ответе
@@ -80,17 +87,14 @@ exports.register = async (req, res) => {
   }
 };
 
-// Логин - УПРОЩЕННАЯ ВЕРСИЯ ДЛЯ ТЕСТОВОЙ СРЕДЫ
+// ✅ УПРОЩЕННЫЙ логин для тестовой среды
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // ✅ ДОБАВЛЕНА ПРОВЕРКА: Валидация входных данных
     if (!username || !password) {
       return res.status(401).json({ message: 'Неверный логин или пароль' });
     }
-
-    console.log('🔍 Попытка входа:', username);
 
     const user = await db.User.unscoped().findOne({
       where: { username },
@@ -98,58 +102,16 @@ exports.login = async (req, res) => {
       attributes: { include: ['passwordHash'] }
     });
 
-    console.log('👤 Пользователь найден:', user ? user.username : 'НЕТ');
-
     if (!user) {
-      console.log('❌ Пользователь не найден');
       return res.status(401).json({ message: 'Неверный логин или пароль' });
     }
 
-    const { passwordHash } = user;
-    console.log('🔑 Пароль получен:', passwordHash ? 'ДА' : 'НЕТ');
-
-    // ❌ ОТКЛЮЧЕНО: Проверка пароля через bcrypt для продакшена
-    /*
-    let passwordValid = false;
-
-    if (passwordHash && passwordHash.startsWith('$2b
-)) {
-      try {
-        passwordValid = await bcrypt.compare(password, passwordHash);
-        console.log('🔒 Результат bcrypt для', username, ':', passwordValid);
-      } catch (error) {
-        console.error('❌ Ошибка bcrypt:', error);
-        passwordValid = false;
-      }
-    } else {
-      console.log('❌ Неправильный формат хеша пароля');
-      passwordValid = false;
-    }
-    */
-
-    // ----------------------------------------------------------------
-    // ВАЖНО: Выберите один из двух режимов проверки пароля
-    // ----------------------------------------------------------------
-
-    // ✅ РЕЖИМ 1: ДЛЯ ТЕСТОВОЙ СРЕДЫ (простая сверка текста)
-    // Сейчас активен этот режим. Пароли в базе должны быть в виде простого текста.
-    const passwordValid = password === passwordHash;
-    console.log('🔑 Проверка пароля для', username, ':', passwordValid);
-
-    /*
-    // 🔒 РЕЖИМ 2: ДЛЯ ПРОДАКШЕНА (проверка хеша bcrypt)
-    // Чтобы включить, закомментируйте РЕЖИМ 1 и раскомментируйте этот блок.
-    // Также нужно раскомментировать `const bcrypt = require('bcrypt');` в начале файла.
-    const passwordValid = await bcrypt.compare(password, passwordHash);
-    console.log('🔒 Результат bcrypt для', username, ':', passwordValid);
-    */
-
+    // ✅ УПРОЩЕННАЯ проверка пароля для тестов
+    const passwordValid = password === user.passwordHash;
+    
     if (!passwordValid) {
-      console.log('❌ Неверный пароль для:', username);
       return res.status(401).json({ message: 'Неверный логин или пароль' });
     }
-
-    console.log('✅ Авторизация успешна для:', username);
 
     // Генерация JWT токена
     const token = jwt.sign(
@@ -162,9 +124,6 @@ exports.login = async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    console.log('🎫 JWT токен создан для пользователя ID:', user.id);
-
-    // Возвращаем данные без passwordHash
     res.json({
       token,
       user: {
@@ -173,17 +132,18 @@ exports.login = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        position: user.position, // ✅ ДОБАВЛЕНО
         department: user.department
       }
     });
 
   } catch (error) {
-    console.error('💥 Ошибка в login:', error);
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
 
-// ✅ ИСПРАВЛЕННЫЙ МЕТОД: Получить информацию о текущем пользователе
+// Получить информацию о текущем пользователе
 exports.getMe = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -204,13 +164,6 @@ exports.getMe = async (req, res) => {
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
 
-    // Проверка данных для отладки
-    console.log('Department data:', {
-      dbDepartmentId: user.departmentId,
-      includedDepartment: user.department
-    });
-
-    // ✅ ИСПРАВЛЕННАЯ СТРУКТУРА ОТВЕТА с departmentId
     const userData = {
       id: user.id,
       firstName: user.firstName,
@@ -223,85 +176,9 @@ exports.getMe = async (req, res) => {
         : null
     };
 
-    console.log('👤 Отправляем данные пользователя:', userData);
-
     res.json({ user: userData });
   } catch (error) {
     console.error('GetMe error:', error);
-    res.status(500).json({ message: 'Ошибка сервера' });
-  }
-};
-
-// Получение профиля (требуется авторизация)
-exports.getProfileWithAssignments = async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const user = await db.User.findByPk(userId, { attributes: { exclude: ['passwordHash'] } });
-    if (!user) return res.status(404).json({ message: 'Пользователь не найден' });
-
-    let assignments;
-    if (user.role === 'master') {
-      assignments = await db.Assignment.findAll({
-        include: ['operator', 'techCard']
-      });
-    } else {
-      assignments = await db.Assignment.findAll({
-        where: { operatorId: userId },
-        include: ['techCard']
-      });
-    }
-
-    res.json({ user, assignments });
-
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: 'Ошибка сервера' });
-  }
-};
-
-// Запрос на доступ (отправка письма)
-exports.requestAccess = async (req, res) => {
-  try {
-    const { fullName, employeeId, contact } = req.body;
-    if (!fullName || !employeeId || !contact) {
-      return res.status(400).json({ message: 'Пожалуйста, заполните все поля' });
-    }
-
-    // Настройка Nodemailer (используйте реальные SMTP данные!)
-    const transporter = nodemailer.createTransporter({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT),
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    const mailOptions = {
-      from: process.env.SMTP_USER,
-      to: process.env.IT_SUPPORT_EMAIL,
-      subject: `Запрос доступа от ${fullName}`,
-      text: `Детали запроса:\n\nФИО: ${fullName}\nТабельный номер: ${employeeId}\nКонтактные данные: ${contact}\n\nДата запроса: ${new Date().toLocaleString()}`,
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    res.json({ message: 'Ваш запрос отправлен. С вами свяжутся в ближайшее время.' });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: 'Ошибка при отправке запроса' });
-  }
-};
-
-// Удаление пользователя (только для админа)
-exports.deleteUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const deleted = await db.User.destroy({ where: { id } });
-    if (!deleted) return res.status(404).json({ message: 'Пользователь не найден' });
-    res.json({ message: 'Пользователь удалён' });
-  } catch (e) {
-    console.error(e);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
@@ -310,15 +187,23 @@ exports.deleteUser = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { username, firstName, lastName, role, phone, masterId, departmentId, password } = req.body;
+    const { 
+      username, 
+      firstName, 
+      lastName, 
+      role, 
+      phone, 
+      masterId, 
+      departmentId, 
+      position, // ✅ ДОБАВЛЕНО
+      password 
+    } = req.body;
 
-    // Проверка, что пользователь существует
     const user = await db.User.findByPk(id);
     if (!user) {
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
 
-    // Подготовка данных для обновления
     const updateData = {
       username,
       firstName,
@@ -327,18 +212,17 @@ exports.updateUser = async (req, res) => {
       phone,
       masterId,
       departmentId,
+      position // ✅ ДОБАВЛЕНО
     };
 
-    // Если в запросе есть пароль, "хэшируем" и добавляем его
-    // В тестовой среде просто сохраняем как есть
+    // Если в запросе есть пароль, добавляем его
     if (password) {
       updateData.passwordHash = password;
     }
 
-    // Обновляем пользователя
     await user.update(updateData);
 
-    // Получаем обновленного пользователя с данными отдела
+    // Получаем обновленного пользователя
     const updatedUser = await db.User.findByPk(id, {
       attributes: { exclude: ['passwordHash'] },
       include: {
@@ -348,11 +232,31 @@ exports.updateUser = async (req, res) => {
       }
     });
 
-    res.json({ message: 'Пользователь успешно обновлен', user: updatedUser });
+    res.json({ 
+      message: 'Пользователь успешно обновлен', 
+      user: updatedUser 
+    });
 
   } catch (e) {
     console.error('Update user error:', e);
     res.status(500).json({ message: 'Ошибка сервера при обновлении пользователя' });
+  }
+};
+
+// Удаление пользователя (только для админа)
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await db.User.destroy({ where: { id } });
+    
+    if (!deleted) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
+    }
+    
+    res.json({ message: 'Пользователь удалён' });
+  } catch (e) {
+    console.error('Delete user error:', e);
+    res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
 
@@ -362,7 +266,6 @@ exports.updateUserRole = async (req, res) => {
     const { id } = req.params;
     const { role } = req.body;
 
-    // Проверяем валидность роли
     const validRoles = ['employee', 'master', 'director', 'admin'];
     if (!validRoles.includes(role)) {
       return res.status(400).json({ message: 'Недопустимая роль' });
@@ -383,3 +286,4 @@ exports.updateUserRole = async (req, res) => {
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
+

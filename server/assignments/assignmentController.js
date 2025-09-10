@@ -95,17 +95,31 @@ exports.getAssignments = async (req, res) => {
   }
 };
 
-
 // Создать задание
 exports.createAssignment = async (req, res) => {
+  console.log('🎯 createAssignment ВХОД');
+  console.log('📦 req.body:', JSON.stringify(req.body, null, 2));
+
   try {
     if (!hasManagePermission(req.user.role)) {
       return res.status(403).json({ message: 'Доступ запрещён' });
     }
 
-    const { operatorId, shiftDate, shiftType, taskDescription, machineNumber, detailName, customerName, plannedQuantity, techCardId } = req.body;
+    // ✅ ИСПРАВЛЕНИЕ: Добавляем productionPlanId в деструктуризацию
+    const { 
+      operatorId, 
+      shiftDate, 
+      shiftType, 
+      taskDescription, 
+      machineNumber, 
+      detailName, 
+      customerName, 
+      plannedQuantity, 
+      techCardId, 
+      productionPlanId 
+    } = req.body;
 
-    // Валидация
+    // Валидация обязательных полей
     if (!operatorId || !shiftDate || !shiftType || !taskDescription || !machineNumber) {
       return res.status(400).json({ message: 'Заполните все обязательные поля' });
     }
@@ -114,11 +128,27 @@ exports.createAssignment = async (req, res) => {
       return res.status(400).json({ message: 'Тип смены должен быть "day" или "night"' });
     }
 
+    // Проверяем существование оператора
     const operator = await db.User.findByPk(operatorId);
     if (!operator) {
       return res.status(404).json({ message: 'Оператор не найден' });
     }
 
+    console.log('💾 Создание задания с данными:', {
+      operatorId, 
+      shiftDate, 
+      shiftType, 
+      taskDescription, 
+      machineNumber, 
+      detailName: detailName || 'Не указано',
+      customerName: customerName || 'Не указан',
+      plannedQuantity: parseInt(plannedQuantity) || 0,
+      techCardId: techCardId || 1,
+      productionPlanId: productionPlanId || 1, // ✅ Дефолтное значение
+      status: 'assigned'
+    });
+
+    // ✅ ИСПРАВЛЕНИЕ: Добавляем productionPlanId в создание записи
     const assignment = await db.Assignment.create({
       operatorId, 
       shiftDate: new Date(shiftDate), 
@@ -129,6 +159,7 @@ exports.createAssignment = async (req, res) => {
       customerName: customerName || 'Не указан',
       plannedQuantity: parseInt(plannedQuantity) || 0,
       techCardId: techCardId || 1,
+      productionPlanId: productionPlanId || 1, // ✅ ИСПРАВЛЕНИЕ: Обязательное поле
       status: 'assigned'
     });
 
@@ -139,13 +170,19 @@ exports.createAssignment = async (req, res) => {
       ]
     });
 
+    console.log('✅ Задание создано успешно с ID:', assignment.id);
+    
     res.status(201).json({
       message: 'Задание создано успешно',
       assignment: createdAssignment
     });
   } catch (e) {
-    console.error('Create assignment error:', e);
-    res.status(500).json({ message: 'Ошибка сервера' });
+    console.error('❌ Create assignment error:', e);
+    console.error('❌ Stack trace:', e.stack);
+    res.status(500).json({ 
+      error: 'Ошибка сервера',
+      details: e.message 
+    });
   }
 };
 
@@ -167,6 +204,8 @@ exports.updateAssignment = async (req, res) => {
       if (updateData.shiftDate) updateData.shiftDate = new Date(updateData.shiftDate);
       if (updateData.plannedQuantity) updateData.plannedQuantity = parseInt(updateData.plannedQuantity);
       if (updateData.actualQuantity !== undefined) updateData.actualQuantity = parseInt(updateData.actualQuantity);
+      // ✅ ИСПРАВЛЕНИЕ: Обрабатываем productionPlanId при обновлении
+      if (updateData.productionPlanId) updateData.productionPlanId = parseInt(updateData.productionPlanId);
 
       await assignment.update(updateData);
     } else if (user.role === 'employee' && assignment.operatorId === user.userId) {

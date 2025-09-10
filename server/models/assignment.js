@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
     
     // Связи
     operatorId: { type: DataTypes.INTEGER, allowNull: false },
-    productionPlanId: { type: DataTypes.INTEGER, allowNull: false }, // ✅ НОВОЕ: Связь с планом
+    productionPlanId: { type: DataTypes.INTEGER, allowNull: false },
     techCardId: { type: DataTypes.INTEGER, allowNull: false },
     
     // Основные данные
@@ -17,11 +17,13 @@ module.exports = (sequelize, DataTypes) => {
     taskDescription: { type: DataTypes.TEXT, allowNull: false },
     machineNumber: { type: DataTypes.STRING, allowNull: false },
     
-    // ✅ УБРАНО: detailName, customerName (берутся из ProductionPlan)
+    // ✅ ВОССТАНОВИТЬ: detailName, customerName
+    detailName: { type: DataTypes.STRING, allowNull: false }, // ✅ ДОБАВИТЬ
+    customerName: { type: DataTypes.STRING, allowNull: false }, // ✅ ДОБАВИТЬ
     
     // Количество
-    plannedQuantity: { type: DataTypes.INTEGER, allowNull: false }, // План на смену
-    actualQuantity: { type: DataTypes.INTEGER, allowNull: true }, // Фактически выполнено
+    plannedQuantity: { type: DataTypes.INTEGER, allowNull: false },
+    actualQuantity: { type: DataTypes.INTEGER, allowNull: true },
     
     // Статус и контроль
     status: { 
@@ -29,8 +31,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false, 
       defaultValue: 'assigned' 
     },
-    startedAt: { type: DataTypes.DATE, allowNull: true }, // Время начала работы
-    completedAt: { type: DataTypes.DATE, allowNull: true }, // Время завершения
+    startedAt: { type: DataTypes.DATE, allowNull: true },
+    completedAt: { type: DataTypes.DATE, allowNull: true },
     notes: { type: DataTypes.TEXT, allowNull: true }
   }, {
     tableName: 'assignments',
@@ -39,29 +41,7 @@ module.exports = (sequelize, DataTypes) => {
       { fields: ['productionPlanId'] },
       { fields: ['shiftDate'] },
       { fields: ['status'] }
-    ],
-    hooks: {
-      // При обновлении actualQuantity - обновляем прогресс в ProductionPlan
-      afterUpdate: async (assignment, options) => {
-        if (assignment.changed('actualQuantity') && assignment.actualQuantity > 0) {
-          const ProductionPlan = sequelize.models.ProductionPlan;
-          
-          // Получаем общий прогресс по плану
-          const totalCompleted = await Assignment.sum('actualQuantity', {
-            where: { 
-              productionPlanId: assignment.productionPlanId,
-              actualQuantity: { [sequelize.Op.not]: null }
-            }
-          });
-          
-          // Обновляем прогресс в производственном плане
-          await ProductionPlan.update(
-            { completedQuantity: totalCompleted || 0 },
-            { where: { id: assignment.productionPlanId } }
-          );
-        }
-      }
-    }
+    ]
   });
 
   Assignment.associate = models => {
@@ -72,5 +52,6 @@ module.exports = (sequelize, DataTypes) => {
 
   return Assignment;
 };
+
 
 

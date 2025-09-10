@@ -108,6 +108,13 @@ app.use((req, res, next) => {
 });
 
 // --- API РОУТЫ ---
+// Логирование всех входящих запросов
+app.use((req, res, next) => {
+  console.log(`🌐 ${req.method} ${req.url}`);
+  console.log('📦 Body:', req.body);
+  console.log('📋 Headers:', req.headers);
+  next();
+});
 
 // Импорт роутов
 const departmentRoutes = require('./department/departmentRoutes');
