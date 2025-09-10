@@ -2,6 +2,16 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
+
+require('dotenv').config();
+
+// Отладка переменных
+console.log('🔍 DB_HOST:', process.env.DB_HOST);
+console.log('🔍 DB_NAME:', process.env.DB_NAME);
+console.log('🔍 MYSQLHOST:', process.env.MYSQLHOST);
+console.log('🔍 MYSQLDATABASE:', process.env.MYSQLDATABASE);
+
+
 // ✅ ФИКС ДЛЯ RAILWAY - Правильная обработка PORT
 const PORT = (() => {
   let port = process.env.PORT;

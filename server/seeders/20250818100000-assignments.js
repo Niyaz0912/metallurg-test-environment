@@ -4,14 +4,12 @@ module.exports = {
   async up(queryInterface) {
     console.log('🚀 Создаем сменные задания...');
     
-    // Вспомогательные даты
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(now.getDate() + 1);
     const twoDaysAgo = new Date(now);
     twoDaysAgo.setDate(now.getDate() - 2);
 
-    // Начало/конец смены два дня назад
     const shiftStart = new Date(twoDaysAgo);
     shiftStart.setHours(8, 0, 0, 0);
     const shiftEnd = new Date(twoDaysAgo);
@@ -20,13 +18,18 @@ module.exports = {
     const assignments = [
       {
         id: 1,
-        operatorId: 3, // master из users
+        operatorId: 3,
+        productionPlanId: 1, // ✅ ДОБАВЛЕНО: обязательное поле
         techCardId: 1,
-        shiftDate: now.toISOString().split('T')[0], // YYYY-MM-DD формат для DATEONLY
+        shiftDate: now.toISOString().split('T')[0],
+        shiftType: 'day', // ✅ ДОБАВЛЕНО: обязательное поле
         taskDescription: 'Обработка партии 50 шт. корпуса подшипника',
         machineNumber: 'Станок-05',
+        detailName: 'Корпус подшипника', // ✅ ДОБАВЛЕНО: обязательное поле
+        customerName: 'ООО Заказчик 1', // ✅ ДОБАВЛЕНО: обязательное поле
         plannedQuantity: 50,
         actualQuantity: null,
+        status: 'assigned', // ✅ ДОБАВЛЕНО: со значением по умолчанию
         startedAt: null,
         completedAt: null,
         notes: null,
@@ -35,13 +38,18 @@ module.exports = {
       },
       {
         id: 2,
-        operatorId: 4, // employee1 из users
+        operatorId: 4,
+        productionPlanId: 2, // ✅ ДОБАВЛЕНО
         techCardId: 2,
         shiftDate: tomorrow.toISOString().split('T')[0],
+        shiftType: 'day', // ✅ ДОБАВЛЕНО
         taskDescription: 'Сварка 30 шт. вала привода',
         machineNumber: 'Сварочный пост-02',
+        detailName: 'Вал привода', // ✅ ДОБАВЛЕНО
+        customerName: 'АО Промышленность', // ✅ ДОБАВЛЕНО
         plannedQuantity: 30,
         actualQuantity: 10,
+        status: 'in_progress', // ✅ ДОБАВЛЕНО
         startedAt: now,
         completedAt: null,
         notes: null,
@@ -50,13 +58,18 @@ module.exports = {
       },
       {
         id: 3,
-        operatorId: 5, // employee2 из users
+        operatorId: 5,
+        productionPlanId: 3, // ✅ ДОБАВЛЕНО
         techCardId: 3,
         shiftDate: twoDaysAgo.toISOString().split('T')[0],
+        shiftType: 'day', // ✅ ДОБАВЛЕНО
         taskDescription: 'Контроль качества готовых крышек двигателя',
         machineNumber: 'Лаб-01',
+        detailName: 'Крышка двигателя', // ✅ ДОБАВЛЕНО
+        customerName: 'ЗАО Металлургия', // ✅ ДОБАВЛЕНО
         plannedQuantity: 40,
         actualQuantity: 40,
+        status: 'completed', // ✅ ДОБАВЛЕНО
         startedAt: shiftStart,
         completedAt: shiftEnd,
         notes: 'Без замечаний',
@@ -65,31 +78,9 @@ module.exports = {
       }
     ];
 
-    // Обновляем существующие задания по id (идемпотентность)
-    for (const assignment of assignments) {
-      await queryInterface.bulkUpdate(
-        'assignments',
-        {
-          operatorId: assignment.operatorId,
-          techCardId: assignment.techCardId,
-          shiftDate: assignment.shiftDate,
-          taskDescription: assignment.taskDescription,
-          machineNumber: assignment.machineNumber,
-          plannedQuantity: assignment.plannedQuantity,
-          actualQuantity: assignment.actualQuantity,
-          startedAt: assignment.startedAt,
-          completedAt: assignment.completedAt,
-          notes: assignment.notes,
-          updatedAt: new Date(),
-        },
-        { id: assignment.id }
-      );
-    }
-
-    // Вставляем отсутствующие задания
     await queryInterface.bulkInsert('assignments', assignments, {
       ignoreDuplicates: true,
-      validate: false, // Избегаем проблем с хуками модели
+      validate: false,
     });
 
     console.log('✅ Сменные задания созданы успешно!');
@@ -101,5 +92,3 @@ module.exports = {
     });
   }
 };
-
-

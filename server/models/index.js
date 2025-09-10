@@ -63,7 +63,7 @@ if (env === 'test') {
   }
 } else {
   console.log('⚠️ DEVELOPMENT MODE');
-  
+
   // Для development используем локальные настройки
   sequelize = new Sequelize({
     database: process.env.DB_NAME || 'metallurgdb',
@@ -104,25 +104,24 @@ if (env !== 'test') {
     try {
       await sequelize.authenticate();
       console.log('✅ Database connection established successfully');
-      
+
       // ВРЕМЕННО: Принудительно создаем таблицы в production
       if (env === 'production') {
         console.log('🔄 Creating tables automatically...');
         await sequelize.sync({ force: false, alter: true });
         console.log('✅ All tables created successfully');
       }
-      
-      /*
+
       // Синхронизация моделей в development
       if (env === 'development') {
         await sequelize.sync({ alter: true });
         console.log('🔄 Database models synced');
       }
-      */
+
     } catch (error) {
       console.error('❌ Unable to connect to the database:', error.message);
       console.error('📚 Full error:', error);
-      
+
       // В production не останавливаем приложение из-за БД
       if (env !== 'production') {
         process.exit(1);
