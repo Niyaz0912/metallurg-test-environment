@@ -1,43 +1,5 @@
-// ✅ Загрузка .env файла из папки server
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
-
-
-require('dotenv').config();
-
-// Отладка переменных
-console.log('🔍 DB_HOST:', process.env.DB_HOST);
-console.log('🔍 DB_NAME:', process.env.DB_NAME);
-console.log('🔍 MYSQLHOST:', process.env.MYSQLHOST);
-console.log('🔍 MYSQLDATABASE:', process.env.MYSQLDATABASE);
-
-
-// ✅ ФИКС ДЛЯ RAILWAY - Правильная обработка PORT
-const PORT = (() => {
-  let port = process.env.PORT;
-  if (!port) return 3001;
-  if (typeof port === 'string') port = parseInt(port, 10);
-  if (isNaN(port) || port < 0 || port > 65535) {
-    console.warn('⚠️ Invalid PORT, using default 3001');
-    return 3001;
-  }
-  return port;
-})();
-
-console.log('🔧 Server starting with PORT:', PORT);
-
-// Проверка обязательных переменных окружения
-if (!process.env.JWT_SECRET) {
-  console.error('❌ Fatal error: JWT_SECRET is not defined');
-  console.log('🔍 Current JWT_SECRET:', process.env.JWT_SECRET);
-  console.log('📋 NODE_ENV:', process.env.NODE_ENV);
-  console.log('📋 PORT:', process.env.PORT);
-  process.exit(1);
-}
-
-console.log(`🚀 Starting server on port ${PORT}`);
-console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-console.log(`🔧 PORT value: ${process.env.PORT} (processed as: ${PORT})`);
 
 const express = require('express');
 const cors = require('cors');
@@ -45,18 +7,15 @@ const fs = require('fs');
 const db = require('./models');
 
 const app = express();
+const PORT = process.env.PORT || 3001;
 
-// Создание папки uploads если её нет
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log('📁 Created uploads directory');
+// Проверка JWT_SECRET
+if (!process.env.JWT_SECRET) {
+  console.error('❌ JWT_SECRET is required');
+  process.exit(1);
 }
 
-const isProduction = process.env.NODE_ENV === 'production';
-const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_NAME;
-
-// ✅ УПРОЩЁННЫЙ CORS - без проблемных паттернов
+// CORS
 app.use(cors({
   origin: true,
   credentials: true,
@@ -64,67 +23,20 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// ✅ ИСПРАВЛЕННАЯ НОРМАЛИЗАЦИЯ ПУТЕЙ API
-app.use((req, res, next) => {
-  const originalUrl = req.url;
-  
-  // Исправляем дублированные /api/api/ на /api/
-  if (req.url.includes('/api/api/')) {
-    req.url = req.url.replace(/\/api\/api\//g, '/api/');
-  }
-  
-  // Убираем множественные слэши
-  req.url = req.url.replace(/\/+/g, '/');
-  
-  // Логируем изменения
-  if (originalUrl !== req.url) {
-    console.log(`🔁 URL rewritten: ${originalUrl} -> ${req.url}`);
-  }
-  
-  next();
-});
-
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Создание папки uploads
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 // Статика для загрузок
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/api/files/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/api/files', express.static(path.join(__dirname, 'uploads')));
-
-// Логирование
-app.use((req, res, next) => {
-  const isProd = process.env.NODE_ENV === 'production';
-  if (!isProd || process.env.DEBUG_REQUESTS === 'true') {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${req.method} ${req.url}`);
-    if (!isProd && req.body && Object.keys(req.body).length > 0) {
-      const sanitizedBody = { ...req.body };
-      if (sanitizedBody.password) sanitizedBody.password = '[HIDDEN]';
-      if (sanitizedBody.token) sanitizedBody.token = '[HIDDEN]';
-      console.log(`  📦 Body:`, sanitizedBody);
-    }
-  }
-  const startTime = Date.now();
-  res.on('finish', () => {
-    if (!isProd || process.env.DEBUG_REQUESTS === 'true') {
-      const duration = Date.now() - startTime;
-      const statusColor = res.statusCode >= 400 ? '🔴' : res.statusCode >= 300 ? '🟡' : '🟢';
-      console.log(`  ${statusColor} ${res.statusCode} - ${duration}ms`);
-    }
-  });
-  next();
-});
-
-// --- API РОУТЫ ---
-// Логирование всех входящих запросов
-app.use((req, res, next) => {
-  console.log(`🌐 ${req.method} ${req.url}`);
-  console.log('📦 Body:', req.body);
-  console.log('📋 Headers:', req.headers);
-  next();
-});
+app.use('/uploads', express.static(uploadsDir));
+app.use('/api/files/uploads', express.static(uploadsDir));
+app.use('/api/files', express.static(uploadsDir));
 
 // Импорт роутов
 const departmentRoutes = require('./department/departmentRoutes');
@@ -134,7 +46,7 @@ const taskRoutes = require('./tasks/taskRoutes');
 const techCardRoutes = require('./techCards/techCardRoutes');
 const productionPlanRoutes = require('./productionPlans/productionPlanRoutes');
 
-// Подключаем роуты
+// API маршруты с префиксом /api (для веб)
 app.use('/api/departments', departmentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/assignments', assignmentRoutes);
@@ -142,13 +54,19 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/techcards', techCardRoutes);
 app.use('/api/productionPlans', productionPlanRoutes);
 
-// Health check эндпоинты
+// 🆕 API маршруты БЕЗ префикса /api (для мобайл)
+app.use('/departments', departmentRoutes);
+app.use('/users', userRoutes);
+app.use('/assignments', assignmentRoutes);
+app.use('/tasks', taskRoutes);
+app.use('/techcards', techCardRoutes);
+app.use('/productionPlans', productionPlanRoutes);
+
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     environment: process.env.NODE_ENV || 'development',
-    railway: !!isRailway,
-    database: db.sequelize.config.database || 'sqlite-memory',
     time: new Date().toISOString(),
     uptime: process.uptime()
   });
@@ -162,186 +80,106 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/api', (req, res) => {
-  res.json({
-    message: 'Metallurg API Server',
-    version: '1.0.0',
-    railway: !!isRailway,
-    endpoints: [
-      '/api/health - Server health check',
-      '/health - Railway health check',
-      '/api/departments - Department management',
-      '/api/users - User management and authentication',
-      '/api/assignments - Shift assignments management',
-      '/api/tasks - Task management',
-      '/api/techcards - Technical cards management',
-      '/api/productionPlans - Production planning'
-    ]
-  });
-});
-
 // Раздача фронтенда
 const frontendBuildPath = path.join(__dirname, '..', 'frontend', 'dist');
-if (isProduction || isRailway) {
-  if (fs.existsSync(frontendBuildPath)) {
-    console.log('🎨 Frontend build found, serving React app from', frontendBuildPath);
-    app.use(express.static(frontendBuildPath));
-  } else {
-    console.log('⚠️ Frontend build not found at', frontendBuildPath);
-  }
+const isProduction = process.env.NODE_ENV === 'production';
 
-  // ✅ БЕЗОПАСНЫЙ SPA-fallback БЕЗ WILDCARDS
-  app.use((req, res, next) => {
-    // Пропускаем API запросы
-    if (req.url.startsWith('/api/')) {
-      return res.status(404).json({ error: 'API endpoint not found' });
-    }
+if (isProduction) {
+  if (fs.existsSync(frontendBuildPath)) {
+    console.log('🎨 Serving React app from:', frontendBuildPath);
+    app.use(express.static(frontendBuildPath));
     
-    // Для всех остальных запросов отдаём index.html
-    const frontendIndexPath = path.join(frontendBuildPath, 'index.html');
-    if (fs.existsSync(frontendIndexPath)) {
-      res.sendFile(frontendIndexPath);
-    } else {
-      res.status(404).json({
-        error: 'Frontend not built',
-        message: 'index.html not found in build directory'
-      });
-    }
-  });
+    // SPA fallback - только для не-API запросов
+    app.get('*', (req, res) => {
+      // Если запрос к API - возвращаем 404
+      if (req.url.startsWith('/api/') || req.url.startsWith('/assignments') || 
+          req.url.startsWith('/users') || req.url.startsWith('/techcards') || 
+          req.url.startsWith('/productionPlans') || req.url.startsWith('/tasks') ||
+          req.url.startsWith('/departments')) {
+        return res.status(404).json({ error: 'API endpoint not found' });
+      }
+      
+      // Для всех остальных - отдаём React приложение
+      const indexPath = path.join(frontendBuildPath, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(404).json({ error: 'Frontend not found' });
+      }
+    });
+  } else {
+    console.log('⚠️ Frontend build not found');
+  }
 }
 
 // Обработка ошибок
 app.use((err, req, res, next) => {
-  const errorId = Date.now().toString(36);
   const isProd = process.env.NODE_ENV === 'production';
   
   if (!isProd) {
-    console.error('🚨 Ошибка сервера:', err.message);
+    console.error('🚨 Server Error:', err.message);
     console.error('Stack:', err.stack);
-  } else {
-    console.error(`🚨 Ошибка [${errorId}]:`, err.message);
-  }
-  
-  if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ 
-      error: 'Файл слишком большой', 
-      message: 'Максимальный размер файла: 10MB' 
-    });
-  }
-  
-  if (err.name === 'SequelizeValidationError') {
-    return res.status(400).json({ 
-      error: 'Ошибка валидации данных', 
-      message: isProd ? 'Неверные данные' : err.message 
-    });
   }
   
   if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
     return res.status(401).json({ 
-      error: 'Ошибка авторизации', 
-      message: 'Необходимо войти в систему заново' 
+      error: 'Authentication required',
+      message: 'Please login again' 
     });
   }
   
   const statusCode = err.statusCode || err.status || 500;
   res.status(statusCode).json({
-    error: isProd ? 'Internal Server Error' : err.name || 'Server Error',
-    message: isProd ? 'Что-то пошло не так. Попробуйте позже.' : err.message,
-    ...(process.env.DEBUG === 'true' && { errorId })
+    error: isProd ? 'Internal Server Error' : err.message,
+    message: isProd ? 'Something went wrong' : err.stack
   });
 });
 
 async function startServer() {
   try {
-    console.log('🔍 DEBUG: Environment detection');
-    console.log('NODE_ENV from process.env:', process.env.NODE_ENV);
-    console.log('RAILWAY_ENVIRONMENT:', process.env.RAILWAY_ENVIRONMENT_NAME);
-    console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
-    console.log('MYSQLHOST:', process.env.MYSQLHOST ? 'SET' : 'NOT SET');
-    console.log('MYSQLDATABASE:', process.env.MYSQLDATABASE);
-
+    console.log(`🔍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    
     await db.sequelize.authenticate();
-    console.log('✅ Database connection established');
+    console.log('✅ Database connected');
 
-    if (!isProduction) {
-      console.log('🔄 Development mode: Database sync disabled');
-    } else {
-      console.log('🔄 Creating tables automatically...');
+    if (isProduction) {
+      console.log('🔄 Syncing database...');
       await db.sequelize.sync();
-      
-      // 🆕 АВТОМАТИЧЕСКИЙ ЗАПУСК СИДЕРОВ В ПРОДАКШЕНЕ
-      console.log('🌱 Running seeders...');
-      try {
-        const { execSync } = require('child_process');
-        execSync('npm run seed', { 
-          cwd: __dirname, 
-          stdio: 'inherit',
-          env: { ...process.env, NODE_ENV: 'production' }
-        });
-        console.log('✅ Seeders completed successfully');
-      } catch (seedError) {
-        // Сидеры могут упасть, если данные уже есть - это нормально
-        console.log('ℹ️ Seeders message:', seedError.message);
-        console.log('📝 Note: This is normal if data already exists');
-      }
-      
-      console.log('✅ Database initialization completed');
+      console.log('✅ Database synced');
     }
 
-    const server = app.listen(PORT, '0.0.0.0', () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      const railwayEnv = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_NAME;
-      console.log(`🌐 Railway: ${railwayEnv ? 'Yes' : 'No'}`);
-      if (railwayEnv) {
-        console.log(`🔗 Railway URL: https://${process.env.RAILWAY_PROJECT_NAME || 'app'}.up.railway.app`);
-      } else {
-        console.log(`🏠 Local URL: http://localhost:${PORT}`);
+      console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+      if (process.env.RAILWAY_PROJECT_NAME) {
+        console.log(`🔗 Railway URL: https://${process.env.RAILWAY_PROJECT_NAME}.up.railway.app`);
       }
-      console.log('✅ Server started without wildcard patterns');
-      console.log('✅ Path-to-regexp compatibility issue resolved');
-      console.log('🌱 Automatic seeders enabled for production');
+      console.log('✅ API available at:');
+      console.log('   📱 Mobile: /assignments, /users, /techcards');
+      console.log('   🌐 Web: /api/assignments, /api/users, /api/techcards');
     });
 
-    const gracefulShutdown = (signal) => {
-      console.log(`🛑 ${signal} received. Shutting down gracefully...`);
-      server.close(async () => {
-        try {
-          await db.sequelize.close();
-          console.log('💾 Database connection closed');
-        } catch (error) {
-          console.error('❌ Error closing database:', error.message);
-        }
-        process.exit(0);
-      });
-      setTimeout(() => {
-        console.error('❌ Forced shutdown');
-        process.exit(1);
-      }, 10000);
-    };
-
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   } catch (err) {
     console.error('❌ Server startup failed:', err.message);
     process.exit(1);
   }
 }
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('🚨 Unhandled Promise Rejection:', reason?.message || reason);
-});
+// Graceful shutdown
+const gracefulShutdown = (signal) => {
+  console.log(`🛑 ${signal} received. Shutting down...`);
+  process.exit(0);
+};
 
-process.on('uncaughtException', (error) => {
-  console.error('🚨 Uncaught Exception:', error.message);
-  process.exit(1);
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 if (process.env.NODE_ENV !== 'test') {
   startServer();
 }
 
 module.exports = app;
+
 
 
 
