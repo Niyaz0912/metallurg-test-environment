@@ -54,7 +54,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/techcards', techCardRoutes);
 app.use('/api/productionPlans', productionPlanRoutes);
 
-// 🆕 API маршруты БЕЗ префикса /api (для мобайл)
+// API маршруты БЕЗ префикса /api (для мобайл)
 app.use('/departments', departmentRoutes);
 app.use('/users', userRoutes);
 app.use('/assignments', assignmentRoutes);
@@ -89,23 +89,22 @@ if (isProduction) {
     console.log('🎨 Serving React app from:', frontendBuildPath);
     app.use(express.static(frontendBuildPath));
     
-    // SPA fallback - только для не-API запросов
-    app.get('*', (req, res) => {
-      // Если запрос к API - возвращаем 404
-      if (req.url.startsWith('/api/') || req.url.startsWith('/assignments') || 
-          req.url.startsWith('/users') || req.url.startsWith('/techcards') || 
-          req.url.startsWith('/productionPlans') || req.url.startsWith('/tasks') ||
-          req.url.startsWith('/departments')) {
+    // SPA fallback - ТОЛЬКО для не-API запросов
+    app.use((req, res, next) => {
+      // Пропускаем все API запросы
+      if (req.url.startsWith('/api/') || 
+          req.url.startsWith('/assignments') || 
+          req.url.startsWith('/users') || 
+          req.url.startsWith('/techcards') || 
+          req.url.startsWith('/productionPlans') || 
+          req.url.startsWith('/tasks') ||
+          req.url.startsWith('/departments') ||
+          req.url.startsWith('/health')) {
         return res.status(404).json({ error: 'API endpoint not found' });
       }
       
-      // Для всех остальных - отдаём React приложение
-      const indexPath = path.join(frontendBuildPath, 'index.html');
-      if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
-      } else {
-        res.status(404).json({ error: 'Frontend not found' });
-      }
+      // Для всех остальных - отдаём React
+      res.sendFile(path.join(frontendBuildPath, 'index.html'));
     });
   } else {
     console.log('⚠️ Frontend build not found');
@@ -115,19 +114,19 @@ if (isProduction) {
 // Обработка ошибок
 app.use((err, req, res, next) => {
   const isProd = process.env.NODE_ENV === 'production';
-  
+
   if (!isProd) {
     console.error('🚨 Server Error:', err.message);
     console.error('Stack:', err.stack);
   }
-  
+
   if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
-    return res.status(401).json({ 
+    return res.status(401).json({
       error: 'Authentication required',
-      message: 'Please login again' 
+      message: 'Please login again'
     });
   }
-  
+
   const statusCode = err.statusCode || err.status || 500;
   res.status(statusCode).json({
     error: isProd ? 'Internal Server Error' : err.message,
@@ -138,7 +137,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     console.log(`🔍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    
+
     await db.sequelize.authenticate();
     console.log('✅ Database connected');
 
@@ -179,6 +178,7 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 module.exports = app;
+
 
 
 
