@@ -16,7 +16,7 @@ const adminOnly = (req, res, next) => {
 };
 
 // Маршруты
-router.get('/', controller.getAllDepartments);
+router.get('/', authMiddleware, controller.getAllDepartments);
 router.get('/:id', controller.getDepartment);
 router.post('/', authMiddleware, adminOnly, controller.createDepartment);
 router.put('/:id', authMiddleware, adminOnly, controller.updateDepartment);
