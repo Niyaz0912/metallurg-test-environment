@@ -84,7 +84,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setLoading(false);
         return null;
       }
-
+  
       console.log('🔄 === НАЧАЛО ЗАГРУЗКИ ДАННЫХ ПОЛЬЗОВАТЕЛЯ ===');
       console.log('🔑 Токен найден:', token.substring(0, 20) + '...');
       console.log('🚀 shouldRedirect:', shouldRedirect);
@@ -96,29 +96,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           'Content-Type': 'application/json'
         }
       });
-
+  
       console.log('📝 Ответ сервера:', response.status, response.statusText);
-
+  
       if (response.ok) {
         const data = await response.json();
         console.log('✅ RAW данные от сервера:', JSON.stringify(data, null, 2));
         
-        if (data.user) {
+        // ИСПРАВЛЕНИЕ: сервер теперь возвращает данные напрямую
+        if (data.id) { // ← Изменено с data.user на data.id
           const userData = {
-            id: data.user.id,
-            firstName: data.user.firstName,
-            lastName: data.user.lastName,
-            role: data.user.role,
-            position: data.user.position,
-            departmentId: data.user.departmentId,
-            department: data.user.department
+            id: data.id,           // ← Изменено с data.user.id на data.id
+            firstName: data.firstName,     // ← Изменено с data.user.firstName
+            lastName: data.lastName,       // ← Изменено с data.user.lastName
+            role: data.role,               // ← Изменено с data.user.role
+            position: data.position,       // ← Изменено с data.user.position
+            departmentId: data.departmentId, // ← Изменено с data.user.departmentId
+            department: data.department      // ← Изменено с data.user.department
           };
           
           console.log('📋 Обработанные данные пользователя:', JSON.stringify(userData, null, 2));
           setUser(userData);
           console.log('✅ Пользователь установлен в состояние');
-
-          // 🔍 ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ РЕДИРЕКТА
+  
+          // Редирект логика остается без изменений
           if (shouldRedirect) {
             console.log('🚀 === НАЧАЛО ПРОЦЕССА РЕДИРЕКТА ===');
             console.log('⏰ Текущий URL:', window.location.href);
@@ -128,23 +129,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.log('🎯 Пытаемся перейти на:', redirectPath);
             console.log('🔄 Вызываем navigate...');
             
-            // Добавляем небольшую задержку для отладки
             setTimeout(() => {
               console.log('⏳ Выполняем navigate через setTimeout');
               navigate(redirectPath);
               
-              // Проверяем результат через секунду
               setTimeout(() => {
                 console.log('📍 URL после navigate:', window.location.href);
                 console.log('🚀 === КОНЕЦ ПРОЦЕССА РЕДИРЕКТА ===');
               }, 1000);
             }, 100);
           }
-
+  
           console.log('🔄 === КОНЕЦ ЗАГРУЗКИ ДАННЫХ ПОЛЬЗОВАТЕЛЯ ===');
           return userData;
         } else {
-          console.error('❌ В ответе сервера отсутствует user');
+          console.error('❌ В ответе сервера отсутствует id пользователя');
         }
       } else {
         const errorText = await response.text();
@@ -162,6 +161,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
     }
   };
+  
 
   // useEffect для проверки токена при загрузке (без редиректа)
   useEffect(() => {

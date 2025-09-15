@@ -157,7 +157,7 @@ exports.getMe = async (req, res) => {
           required: false
         }
       ],
-      attributes: ['id', 'firstName', 'lastName', 'role', 'position', 'departmentId']
+      attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'position', 'departmentId'] // ДОБАВЛЕНО: username
     });
 
     if (!user) {
@@ -166,6 +166,7 @@ exports.getMe = async (req, res) => {
 
     const userData = {
       id: user.id,
+      username: user.username, // ДОБАВЛЕНО: username
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
@@ -176,12 +177,14 @@ exports.getMe = async (req, res) => {
         : null
     };
 
-    res.json({ user: userData });
+    // ИЗМЕНЕНО: возвращаем данные пользователя напрямую, а не обернутыми в объект
+    res.json(userData);
   } catch (error) {
     console.error('GetMe error:', error);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
+
 
 // Обновление пользователя (только для админа)
 exports.updateUser = async (req, res) => {

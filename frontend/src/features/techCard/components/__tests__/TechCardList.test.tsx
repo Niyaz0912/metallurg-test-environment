@@ -78,5 +78,3 @@ describe('TechCardList Component', () => {
     }
   });
 });
-
-
