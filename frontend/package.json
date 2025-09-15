@@ -1,7 +1,7 @@
 {
   "name": "company-wiki-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,6 @@
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx,js,jsx --report-unused-disable-directives --max-warnings 0 --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,scss,less,html,md}\"",
-
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
