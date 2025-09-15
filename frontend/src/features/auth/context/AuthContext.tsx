@@ -188,6 +188,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('📡 Загружаем данные пользователя с редиректом...');
       await fetchUserData(true);
       
+      
       console.log('🔐 === КОНЕЦ ПРОЦЕССА ЛОГИНА ===');
     } catch (error) {
       console.error('❌ Ошибка авторизации:', error);
