@@ -157,33 +157,34 @@ exports.getMe = async (req, res) => {
           required: false
         }
       ],
-      attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'position', 'departmentId'] // ДОБАВЛЕНО: username
+      attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'position', 'departmentId']
     });
-
-    if (!user) {
-      return res.status(404).json({ message: 'Пользователь не найден' });
-    }
-
+    
     const userData = {
       id: user.id,
-      username: user.username, // ДОБАВЛЕНО: username
+      username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
       position: user.position,
       departmentId: user.departmentId,
-      department: user.department 
-        ? { id: user.department.id, name: user.department.name }
-        : null
+      department: user.department ? {
+        id: user.department.id,
+        name: user.department.name
+      } : null
     };
-
-    // ИЗМЕНЕНО: возвращаем данные пользователя напрямую, а не обернутыми в объект
+    
     res.json({ user: userData });
+    
   } catch (error) {
     console.error('GetMe error:', error);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
+if (!user) {
+  return res.status(404).json({ message: 'Пользователь не найден' });
+}
+
 
 
 // Обновление пользователя (только для админа)
