@@ -178,7 +178,7 @@ exports.getMe = async (req, res) => {
     };
 
     // ИЗМЕНЕНО: возвращаем данные пользователя напрямую, а не обернутыми в объект
-    res.json(userData);
+    res.json({ user: userData });
   } catch (error) {
     console.error('GetMe error:', error);
     res.status(500).json({ message: 'Ошибка сервера' });
