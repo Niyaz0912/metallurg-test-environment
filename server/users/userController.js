@@ -38,7 +38,7 @@ exports.register = async (req, res) => {
       phone, 
       masterId, 
       departmentId, 
-      position // ✅ ДОБАВЛЕНО: поле position
+      position
     } = req.body;
 
     // Проверка существования отдела
@@ -53,7 +53,6 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Пользователь с таким именем уже существует' });
     }
 
-    // ✅ УПРОЩЕНО: для тестовой среды сохраняем пароль как есть
     const passwordHash = password;
 
     // Создание пользователя
@@ -66,7 +65,7 @@ exports.register = async (req, res) => {
       phone,
       masterId,
       departmentId,
-      position // ✅ ДОБАВЛЕНО
+      position
     });
 
     // Не возвращаем хэш пароля в ответе
@@ -87,7 +86,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// ✅ УПРОЩЕННЫЙ логин для тестовой среды
+// Упрощенный логин для тестовой среды
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -106,7 +105,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Неверный логин или пароль' });
     }
 
-    // ✅ УПРОЩЕННАЯ проверка пароля для тестов
+    // Упрощенная проверка пароля для тестов
     const passwordValid = password === user.passwordHash;
     
     if (!passwordValid) {
@@ -132,7 +131,7 @@ exports.login = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
-        position: user.position, // ✅ ДОБАВЛЕНО
+        position: user.position,
         department: user.department
       }
     });
@@ -159,7 +158,11 @@ exports.getMe = async (req, res) => {
       ],
       attributes: ['id', 'username', 'firstName', 'lastName', 'role', 'position', 'departmentId']
     });
-    
+
+    if (!user) {
+      return res.status(404).json({ message: 'Пользователь не найден' });
+    }
+
     const userData = {
       id: user.id,
       username: user.username,
@@ -168,24 +171,17 @@ exports.getMe = async (req, res) => {
       role: user.role,
       position: user.position,
       departmentId: user.departmentId,
-      department: user.department ? {
-        id: user.department.id,
-        name: user.department.name
-      } : null
+      department: user.department 
+        ? { id: user.department.id, name: user.department.name }
+        : null
     };
-    
+
     res.json({ user: userData });
-    
   } catch (error) {
     console.error('GetMe error:', error);
     res.status(500).json({ message: 'Ошибка сервера' });
   }
 };
-if (!user) {
-  return res.status(404).json({ message: 'Пользователь не найден' });
-}
-
-
 
 // Обновление пользователя (только для админа)
 exports.updateUser = async (req, res) => {
@@ -199,7 +195,7 @@ exports.updateUser = async (req, res) => {
       phone, 
       masterId, 
       departmentId, 
-      position, // ✅ ДОБАВЛЕНО
+      position,
       password 
     } = req.body;
 
@@ -216,7 +212,7 @@ exports.updateUser = async (req, res) => {
       phone,
       masterId,
       departmentId,
-      position // ✅ ДОБАВЛЕНО
+      position
     };
 
     // Если в запросе есть пароль, добавляем его
