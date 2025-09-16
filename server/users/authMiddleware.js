@@ -25,6 +25,7 @@ const authMiddleware = async (req, res, next) => {
 
     console.log('Verifying token...'); // Отладка
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('✅ Token verified successfully for user:', decoded.userId);
     console.log('Decoded token:', decoded); // Отладка
     
     // Проверяем существование пользователя в БД
@@ -56,10 +57,28 @@ const authMiddleware = async (req, res, next) => {
     
     next();
   } catch (err) {
-    console.error('Auth middleware error:', err); // Отладка
-    return res.status(401).json({ 
+    console.error('❌ Auth middleware error:', err.name, err.message);
+    
+    // ИСПРАВЛЕНИЕ: Специальная обработка для разных типов JWT ошибок
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Token expired',
+        expired: true  // Флаг для клиента
+      });
+    }
+    
+    if (err.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid token'
+      });
+    }
+    
+    // Для всех остальных ошибок
+    return res.status(401).json({
       error: 'Unauthorized',
-      message: 'Invalid token',
+      message: 'Authentication failed',
       details: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
@@ -91,4 +110,5 @@ module.exports = {
   roleMiddleware, 
   authenticateToken  // ✅ Добавлен алиас для совместимости
 };
+
 
