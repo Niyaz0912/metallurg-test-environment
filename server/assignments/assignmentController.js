@@ -37,6 +37,49 @@ exports.uploadExcelMiddleware = upload.single('excelFile');
 const hasManagePermission = (userRole) => userRole === 'master' || userRole === 'admin';
 const hasViewPermission = (userRole) => ['master', 'admin', 'employee', 'director'].includes(userRole);
 
+// Получить данные для формы создания задания
+exports.getFormData = async (req, res) => {
+  try {
+    if (!hasManagePermission(req.user.role)) {
+      return res.status(403).json({ message: 'Доступ запрещён' });
+    }
+
+    // Получаем уникальные детали из TechCard
+    const products = await db.TechCard.findAll({
+      attributes: ['productName'],
+      where: { status: 'active' },
+      group: ['productName'],
+      order: [['productName', 'ASC']]
+    });
+
+    // Для каждой детали получаем заказчиков
+    const formData = {};
+    
+    for (const product of products) {
+      const customers = await db.TechCard.findAll({
+        attributes: ['customer'],
+        where: { 
+          productName: product.productName,
+          status: 'active' 
+        },
+        group: ['customer'],
+        order: [['customer', 'ASC']]
+      });
+      
+      formData[product.productName] = customers.map(c => c.customer);
+    }
+
+    res.json({
+      products: products.map(p => p.productName),
+      productCustomers: formData
+    });
+
+  } catch (error) {
+    console.error('❌ Get form data error:', error);
+    res.status(500).json({ message: 'Ошибка получения данных формы' });
+  }
+};
+
 // Получить список заданий
 exports.getAssignments = async (req, res) => {
   try {
@@ -374,3 +417,4 @@ exports.getAssignmentStatistics = async (req, res) => {
     res.status(500).json({ message: 'Ошибка получения статистики' });
   }
 };
+

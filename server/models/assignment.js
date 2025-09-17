@@ -17,9 +17,17 @@ module.exports = (sequelize, DataTypes) => {
     taskDescription: { type: DataTypes.TEXT, allowNull: false },
     machineNumber: { type: DataTypes.STRING, allowNull: false },
     
-    // ✅ ВОССТАНОВИТЬ: detailName, customerName
-    detailName: { type: DataTypes.STRING, allowNull: false }, // ✅ ДОБАВИТЬ
-    customerName: { type: DataTypes.STRING, allowNull: false }, // ✅ ДОБАВИТЬ
+    // ✅ ИСПРАВЛЕНИЕ: Сделать необязательными с дефолтами
+    detailName: { 
+      type: DataTypes.STRING, 
+      allowNull: true,           // ✅ ИЗМЕНИТЬ НА true
+      defaultValue: 'Не указано'  // ✅ ДОБАВИТЬ дефолт
+    },
+    customerName: { 
+      type: DataTypes.STRING, 
+      allowNull: true,           // ✅ ИЗМЕНИТЬ НА true  
+      defaultValue: 'Не указан'   // ✅ ДОБАВИТЬ дефолт
+    },
     
     // Количество
     plannedQuantity: { type: DataTypes.INTEGER, allowNull: false },

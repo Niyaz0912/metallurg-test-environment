@@ -23,6 +23,8 @@ interface AssignmentFormProps {
 }
 
 const AssignmentForm: React.FC<AssignmentFormProps> = ({ onAssignmentCreated }) => {
+  const token = localStorage.getItem('token') || '';
+
   const [formData, setFormData] = useState({
     taskDescription: '',
     operatorId: '',
@@ -32,23 +34,58 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({ onAssignmentCreated }) 
     detailName: '',
     customerName: '',
     plannedQuantity: '',
-    techCardId: ''
+    techCardId: '',
+    products: [] as string[],
+    productCustomers: {} as Record<string, string[]>
   });
   
   const [operators, setOperators] = useState<User[]>([]);
   const [techCards, setTechCards] = useState<TechCard[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState('');
+  const [availableCustomers, setAvailableCustomers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
-  // Загрузка списка операторов и техкарт
+  // Загрузка списка операторов, техкарт и данных формы
   useEffect(() => {
     fetchOperators();
     fetchTechCards();
+    loadFormData();
   }, []);
+
+  // Загрузка данных формы при монтировании
+  const loadFormData = async () => {
+    try {
+      const response = await fetch('/api/assignments/form-data', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setFormData(prev => ({
+          ...prev,
+          products: data.products,
+          productCustomers: data.productCustomers
+        }));
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки данных формы:', error);
+    }
+  };
+
+  // При выборе детали - обновляем доступных заказчиков
+  const handleProductChange = (productName: string) => {
+    setSelectedProduct(productName);
+    setAvailableCustomers(formData.productCustomers[productName] || []);
+    // Сброс выбранного заказчика и установка названия детали
+    setFormData(prev => ({ 
+      ...prev, 
+      detailName: productName,
+      customerName: '' 
+    }));
+  };
 
   const fetchOperators = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch('/api/users', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -71,7 +108,6 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({ onAssignmentCreated }) 
 
   const fetchTechCards = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch('/api/techcards', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -113,7 +149,6 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({ onAssignmentCreated }) 
         customerName: formData.customerName,
         plannedQuantity: Number(formData.plannedQuantity) || 0,
         ...(formData.techCardId && { techCardId: Number(formData.techCardId) }),
-
       });
 
       // Сброс формы
@@ -126,9 +161,13 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({ onAssignmentCreated }) 
         detailName: '',
         customerName: '',
         plannedQuantity: '',
-        techCardId: ''
+        techCardId: '',
+        products: formData.products, // Сохраняем загруженные данные
+        productCustomers: formData.productCustomers
       });
 
+      setSelectedProduct('');
+      setAvailableCustomers([]);
       onAssignmentCreated?.();
       
     } catch (_err) { // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -257,30 +296,44 @@ const AssignmentForm: React.FC<AssignmentFormProps> = ({ onAssignmentCreated }) 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Название детали
+              Название детали <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              name="detailName"
-              value={formData.detailName}
-              onChange={handleInputChange}
+            <select 
+              value={selectedProduct}
+              onChange={(e) => handleProductChange(e.target.value)}
+              required
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="Например: Втулка стальная"
-            />
+            >
+              <option value="">Выберите деталь</option>
+              {formData.products.map(product => (
+                <option key={product} value={product}>{product}</option>
+              ))}
+            </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Заказчик
+              Заказчик <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
+            <select 
               name="customerName"
               value={formData.customerName}
               onChange={handleInputChange}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="Например: ООО МеталлСтрой"
-            />
+              disabled={!selectedProduct}
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md disabled:bg-gray-100"
+            >
+              <option value="">Выберите заказчика</option>
+              {availableCustomers.map(customer => (
+                <option key={customer} value={customer}>{customer}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              {!selectedProduct 
+                ? 'Сначала выберите деталь' 
+                : `Доступно заказчиков: ${availableCustomers.length}`
+              }
+            </p>
           </div>
         </div>
 
