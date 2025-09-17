@@ -1,4 +1,4 @@
-// server/models/techCard.js - ПОЛНАЯ ВЕРСИЯ
+// server/models/techCard.js - ИСПРАВЛЕННАЯ ВЕРСИЯ
 module.exports = (sequelize, DataTypes) => {
   const TechCard = sequelize.define('TechCard', {
     // Основная информация (упрощенно)
@@ -91,10 +91,9 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     tableName: 'tech_cards',
     timestamps: true,
+    // ✅ ИСПРАВЛЕНО: Убрал дублирующиеся индексы
     indexes: [
-      {
-        fields: ['customer']
-      },
+      // ❌ Убран: { fields: ['customer'] } - уже создан миграцией
       {
         fields: ['status']
       },
@@ -132,3 +131,4 @@ module.exports = (sequelize, DataTypes) => {
 
   return TechCard;
 };
+
