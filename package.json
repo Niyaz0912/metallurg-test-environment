@@ -3,16 +3,16 @@
   "private": true,
   "version": "1.0.0",
   "description": "Metallurgy test environment with React frontend and Express backend",
- "scripts": {
+  "scripts": {
     "build": "cd frontend && npm install && npm run build && cd ../server && npm install",
-    "start": "cd server && npm install && npx sequelize-cli db:migrate && npm start"
+    "start": "cd server && npm start"
   },
   "engines": {
     "node": "20",
     "npm": ">=10.0.0"
   },
   "repository": {
-    "type": "git", 
+    "type": "git",
     "url": "https://github.com/Niyaz0912/metallurg-test-environment"
   },
   "author": "Нияз Хасанов <khasanchik85@gmail.com>",
