@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "prebuild": "npm ci",
     "dev": "vite",
     "start": "vite",
     "build": "vite build",
@@ -53,3 +54,4 @@
     "@rollup/rollup-linux-x64-gnu": "^4.48.1"
   }
 }
+
