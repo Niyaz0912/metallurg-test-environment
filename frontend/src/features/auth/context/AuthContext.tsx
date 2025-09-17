@@ -23,12 +23,61 @@ interface AuthContextType {
   loading: boolean;
 }
 
+// ✅ Интерфейсы для типизации ответов сервера
+interface UserApiResponse {
+  id: number;
+  firstName: string;
+  lastName: string;
+  role: string;
+  position?: string;
+  departmentId?: number;
+  department?: {
+    id: number;
+    name: string;
+  };
+}
+
+interface WrappedUserApiResponse {
+  user: UserApiResponse;
+}
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 interface AuthProviderProps {
   children: ReactNode;
 }
+
+// ✅ Универсальный парсер с правильной типизацией
+const parseUserData = (responseData: UserApiResponse | WrappedUserApiResponse): User | null => {
+  let userData: UserApiResponse | null = null;
+  
+  // Проверяем разные форматы ответа
+  if ('user' in responseData && responseData.user) {
+    // Формат: {user: {id: 1, ...}}
+    userData = responseData.user;
+    console.log('📦 Данные в формате {user: ...}');
+  } else if ('id' in responseData && responseData.id) {
+    // Формат: {id: 1, ...}
+    userData = responseData;
+    console.log('📦 Данные в прямом формате');
+  }
+  
+  if (!userData || !userData.id) {
+    console.error('❌ Неизвестный формат данных пользователя:', responseData);
+    return null;
+  }
+  
+  return {
+    id: userData.id,
+    firstName: userData.firstName,
+    lastName: userData.lastName,
+    role: userData.role,
+    position: userData.position,
+    departmentId: userData.departmentId,
+    department: userData.department || null
+  };
+};
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -76,7 +125,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return redirectPath;
   };
 
-  const fetchUserData = async (shouldRedirect: boolean = false) => {
+  const fetchUserData = async (shouldRedirect: boolean = false): Promise<User | null> => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -84,7 +133,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setLoading(false);
         return null;
       }
-  
+
       console.log('🔄 === НАЧАЛО ЗАГРУЗКИ ДАННЫХ ПОЛЬЗОВАТЕЛЯ ===');
       console.log('🔑 Токен найден:', token.substring(0, 20) + '...');
       console.log('🚀 shouldRedirect:', shouldRedirect);
@@ -96,30 +145,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           'Content-Type': 'application/json'
         }
       });
-  
+
       console.log('📝 Ответ сервера:', response.status, response.statusText);
-  
+
       if (response.ok) {
-        const data = await response.json();
+        const data: UserApiResponse | WrappedUserApiResponse = await response.json();
         console.log('✅ RAW данные от сервера:', JSON.stringify(data, null, 2));
         
-        // ИСПРАВЛЕНИЕ: сервер теперь возвращает данные напрямую
-        if (data.id) { // ← Изменено с data.user на data.id
-          const userData = {
-            id: data.id,           // ← Изменено с data.user.id на data.id
-            firstName: data.firstName,     // ← Изменено с data.user.firstName
-            lastName: data.lastName,       // ← Изменено с data.user.lastName
-            role: data.role,               // ← Изменено с data.user.role
-            position: data.position,       // ← Изменено с data.user.position
-            departmentId: data.departmentId, // ← Изменено с data.user.departmentId
-            department: data.department      // ← Изменено с data.user.department
-          };
-          
+        // ✅ Используем универсальный парсер
+        const userData = parseUserData(data);
+        
+        if (userData) {
           console.log('📋 Обработанные данные пользователя:', JSON.stringify(userData, null, 2));
           setUser(userData);
           console.log('✅ Пользователь установлен в состояние');
-  
-          // Редирект логика остается без изменений
+
+          // Редирект логика
           if (shouldRedirect) {
             console.log('🚀 === НАЧАЛО ПРОЦЕССА РЕДИРЕКТА ===');
             console.log('⏰ Текущий URL:', window.location.href);
@@ -139,21 +180,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               }, 1000);
             }, 100);
           }
-  
+
           console.log('🔄 === КОНЕЦ ЗАГРУЗКИ ДАННЫХ ПОЛЬЗОВАТЕЛЯ ===');
           return userData;
         } else {
-          console.error('❌ В ответе сервера отсутствует id пользователя');
+          console.error('❌ Не удалось обработать данные пользователя');
+          setUser(null);
+          return null;
         }
       } else {
-        const errorText = await response.text();
-        console.error('❌ Ошибка получения данных:', response.status, errorText);
-        localStorage.removeItem('token');
-        setUser(null);
+        let errorText = '';
+        try {
+          const errorData = await response.json();
+          errorText = errorData.message || errorData.error || 'Неизвестная ошибка';
+          console.error('❌ Ошибка получения данных:', response.status, errorData);
+        } catch {
+          errorText = await response.text();
+          console.error('❌ Ошибка получения данных:', response.status, errorText);
+        }
+        
+        // ✅ Обработка 401 ошибки (истекший токен)
+        if (response.status === 401) {
+          console.log('🚨 Токен истек или недействителен, удаляем из localStorage');
+          localStorage.removeItem('token');
+          setUser(null);
+          
+          // Редиректим на логин только если мы не на странице логина
+          if (!window.location.pathname.includes('/login')) {
+            console.log('🔄 Редирект на /login');
+            navigate('/login');
+          }
+        }
+        
         return null;
       }
     } catch (error) {
       console.error('❌ Ошибка запроса:', error);
+      
+      // Если ошибка сети или другая критическая ошибка, удаляем токен
       localStorage.removeItem('token');
       setUser(null);
       return null;
@@ -161,7 +225,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
     }
   };
-  
 
   // useEffect для проверки токена при загрузке (без редиректа)
   useEffect(() => {
@@ -175,7 +238,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // Функция login с автоматическим редиректом
-  const login = async (token: string) => {
+  const login = async (token: string): Promise<void> => {
     try {
       console.log('🔐 === НАЧАЛО ПРОЦЕССА ЛОГИНА ===');
       console.log('🔑 Получен токен для логина:', token.substring(0, 20) + '...');
@@ -186,8 +249,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Получаем данные пользователя и сразу редиректим
       console.log('📡 Загружаем данные пользователя с редиректом...');
-      await fetchUserData(true);
+      const userData = await fetchUserData(true);
       
+      if (!userData) {
+        console.error('❌ Не удалось загрузить данные пользователя после логина');
+        localStorage.removeItem('token');
+        throw new Error('Не удалось загрузить данные пользователя');
+      }
       
       console.log('🔐 === КОНЕЦ ПРОЦЕССА ЛОГИНА ===');
     } catch (error) {
@@ -195,11 +263,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('token');
       setUser(null);
       setLoading(false);
+      throw error; // Пробрасываем ошибку для обработки в компоненте
     }
   };
 
   // Функция logout с редиректом на страницу входа
-  const logout = () => {
+  const logout = (): void => {
     console.log('👋 === НАЧАЛО ВЫХОДА ===');
     console.log('🗑️ Удаляем токен из localStorage');
     localStorage.removeItem('token');
@@ -236,7 +305,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   
   if (!context) {
@@ -245,5 +314,3 @@ export const useAuth = () => {
   
   return context;
 };
-
-
