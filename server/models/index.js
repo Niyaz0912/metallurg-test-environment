@@ -105,17 +105,24 @@ if (env !== 'test') {
       await sequelize.authenticate();
       console.log('✅ Database connection established successfully');
 
-      // ВРЕМЕННО: Принудительно создаем таблицы в production
+      // ✅ ИСПРАВЛЕНИЕ: Убираем alter: true в продакшене
       if (env === 'production') {
         console.log('🔄 Creating tables automatically...');
-        await sequelize.sync({ force: false, alter: true });
-        console.log('✅ All tables created successfully');
+        console.log('✅ Database connected');
+        console.log('🔄 Syncing database...');
+        
+        // ❌ БЫЛО: await sequelize.sync({ force: false, alter: true });
+        // ✅ СТАЛО: 
+        await sequelize.sync({ force: false, alter: false });
+        
+        console.log('✅ Database synced');
       }
 
       // Синхронизация моделей в development
       if (env === 'development') {
+        console.log('🔄 Syncing database in development mode...');
         await sequelize.sync({ alter: true });
-        console.log('🔄 Database models synced');
+        console.log('✅ Database models synced');
       }
 
     } catch (error) {
@@ -135,5 +142,4 @@ db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
 module.exports = db;
-
 
