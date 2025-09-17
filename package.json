@@ -4,22 +4,18 @@
   "version": "1.0.0",
   "description": "Metallurgy test environment with React frontend and Express backend",
   "scripts": {
-    "build": "cd frontend && npm install && npm run build && cd ../server && npm install",
+    "build": "cd frontend && npm ci && npm run build && cd ../server && npm ci",
     "start": "cd server && npx sequelize-cli db:migrate && npm start"
   },
-  "dependencies": {
-    "dotenv": "^17.2.0",
-    "mysql2": "^3.14.2"
-  },
-  "devDependencies": {},
   "engines": {
     "node": "20",
     "npm": ">=10.0.0"
   },
   "repository": {
-    "type": "git",
+    "type": "git", 
     "url": "https://github.com/Niyaz0912/metallurg-test-environment"
   },
-  "author": "Your Name <your.email@example.com>",
+  "author": "Нияз Хасанов <khasanchik85@gmail.com>",
   "license": "MIT"
 }
+
