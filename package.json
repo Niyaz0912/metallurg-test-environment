@@ -3,9 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "description": "Metallurgy test environment with React frontend and Express backend",
-  "scripts": {
+ "scripts": {
     "build": "cd frontend && npm install && npm run build && cd ../server && npm install",
-    "start": "cd server && npx sequelize-cli db:migrate && npm start"
+    "start": "cd server && npm install && npx sequelize-cli db:migrate && npm start"
   },
   "engines": {
     "node": "20",
