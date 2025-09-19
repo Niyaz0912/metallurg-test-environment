@@ -139,6 +139,7 @@ exports.getAssignments = async (req, res) => {
 };
 
 // Создать задание
+// Создать задание
 exports.createAssignment = async (req, res) => {
   console.log('🎯 createAssignment ВХОД');
   console.log('📦 req.body:', JSON.stringify(req.body, null, 2));
@@ -148,7 +149,6 @@ exports.createAssignment = async (req, res) => {
       return res.status(403).json({ message: 'Доступ запрещён' });
     }
 
-    // ✅ ИСПРАВЛЕНИЕ: Добавляем productionPlanId в деструктуризацию
     const { 
       operatorId, 
       shiftDate, 
@@ -158,11 +158,10 @@ exports.createAssignment = async (req, res) => {
       detailName, 
       customerName, 
       plannedQuantity, 
-      techCardId, 
-      productionPlanId 
+      techCardId 
     } = req.body;
 
-    // Валидация обязательных полей
+    // Базовая валидация
     if (!operatorId || !shiftDate || !shiftType || !taskDescription || !machineNumber) {
       return res.status(400).json({ message: 'Заполните все обязательные поля' });
     }
@@ -177,7 +176,67 @@ exports.createAssignment = async (req, res) => {
       return res.status(404).json({ message: 'Оператор не найден' });
     }
 
-    console.log('💾 Создание задания с данными:', {
+    // ✅ АВТОМАТИЧЕСКИЙ ПОИСК ПРОИЗВОДСТВЕННОГО ПЛАНА
+    console.log('🔍 Ищем производственный план для:', { detailName, customerName });
+    
+    let productionPlan = null;
+    
+    // 1. Ищем точное совпадение: заказчик + название детали
+    if (detailName && customerName) {
+      productionPlan = await db.ProductionPlan.findOne({
+        where: {
+          customerName: customerName,
+          orderName: {
+            [db.Sequelize.Op.like]: `%${detailName}%`
+          },
+          status: ['planned', 'in_progress']
+        },
+        order: [['createdAt', 'DESC']]
+      });
+      
+      if (productionPlan) {
+        console.log('✅ Найден план (точное совпадение):', productionPlan.orderName, 'для', productionPlan.customerName);
+      }
+    }
+    
+    // 2. Если не найден - ищем любой активный план этого заказчика
+    if (!productionPlan && customerName) {
+      productionPlan = await db.ProductionPlan.findOne({
+        where: {
+          customerName: customerName,
+          status: ['planned', 'in_progress']
+        },
+        order: [['createdAt', 'DESC']]
+      });
+      
+      if (productionPlan) {
+        console.log('✅ Найден план (по заказчику):', productionPlan.orderName, 'для', productionPlan.customerName);
+      }
+    }
+    
+    // 3. Крайний случай - берём любой активный план
+    if (!productionPlan) {
+      productionPlan = await db.ProductionPlan.findOne({
+        where: {
+          status: ['planned', 'in_progress']
+        },
+        order: [['createdAt', 'DESC']]
+      });
+      
+      if (productionPlan) {
+        console.log('⚠️ Используем запасной план:', productionPlan.orderName, 'для', productionPlan.customerName);
+      }
+    }
+    
+    // 4. Если совсем ничего не найдено - ошибка
+    if (!productionPlan) {
+      return res.status(404).json({ 
+        message: 'Не найден подходящий производственный план. Создайте заказ сначала.',
+        details: 'Проверьте, что есть активные планы производства'
+      });
+    }
+
+    console.log('💾 Создание задания с найденным планом:', {
       operatorId, 
       shiftDate, 
       shiftType, 
@@ -187,11 +246,11 @@ exports.createAssignment = async (req, res) => {
       customerName: customerName || 'Не указан',
       plannedQuantity: parseInt(plannedQuantity) || 0,
       techCardId: techCardId || 1,
-      productionPlanId: productionPlanId || 1, // ✅ Дефолтное значение
-      status: 'assigned'
+      productionPlanId: productionPlan.id, // ✅ Используем найденный план
+      foundPlanInfo: `${productionPlan.orderName} (${productionPlan.customerName})`
     });
 
-    // ✅ ИСПРАВЛЕНИЕ: Добавляем productionPlanId в создание записи
+    // Создаем задание с автоматически найденным планом
     const assignment = await db.Assignment.create({
       operatorId, 
       shiftDate: new Date(shiftDate), 
@@ -202,14 +261,15 @@ exports.createAssignment = async (req, res) => {
       customerName: customerName || 'Не указан',
       plannedQuantity: parseInt(plannedQuantity) || 0,
       techCardId: techCardId || 1,
-      productionPlanId: productionPlanId || 1, // ✅ ИСПРАВЛЕНИЕ: Обязательное поле
+      productionPlanId: productionPlan.id, // ✅ КЛЮЧЕВОЕ ИЗМЕНЕНИЕ
       status: 'assigned'
     });
 
     const createdAssignment = await db.Assignment.findByPk(assignment.id, {
       include: [
         { model: db.User, as: 'operator', attributes: ['id', 'firstName', 'lastName', 'username'] },
-        { model: db.TechCard, as: 'techCard', attributes: ['id', 'productName', 'description'] }
+        { model: db.TechCard, as: 'techCard', attributes: ['id', 'productName'] },
+        { model: db.ProductionPlan, as: 'productionPlan', attributes: ['id', 'orderName', 'customerName'] }
       ]
     });
 
@@ -217,11 +277,18 @@ exports.createAssignment = async (req, res) => {
     
     res.status(201).json({
       message: 'Задание создано успешно',
-      assignment: createdAssignment
+      assignment: createdAssignment,
+      usedPlan: {
+        id: productionPlan.id,
+        name: productionPlan.orderName,
+        customer: productionPlan.customerName
+      }
     });
+
   } catch (e) {
-    console.error('❌ Create assignment error:', e);
+    console.error('❌ Create assignment error:', e.message);
     console.error('❌ Stack trace:', e.stack);
+    
     res.status(500).json({ 
       error: 'Ошибка сервера',
       details: e.message 
