@@ -8,6 +8,7 @@ module.exports = {
     host: process.env.DB_HOST || '127.0.0.1',
     dialect: process.env.DB_DIALECT || 'mysql',
   },
+  
   test: {
     username: process.env.DB_USERNAME || 'root',
     password: process.env.DB_PASSWORD || null,
@@ -17,20 +18,15 @@ module.exports = {
     logging: console.log
   },
   
-  // ✅ ИСПРАВЛЕНО для Railway
+  // ✅ ПРАВИЛЬНО для FirstByte сервера
   production: {
-    username: process.env.MYSQLUSER,
-    password: process.env.MYSQLPASSWORD,
-    database: process.env.MYSQLDATABASE,
-    host: process.env.MYSQLHOST,
-    port: process.env.MYSQLPORT,
-    dialect: 'mysql',
+    username: process.env.DB_USERNAME || 'metallurg_user',
+    password: process.env.DB_PASSWORD || 'MetallurgApp2024!',
+    database: process.env.DB_NAME || 'metallurg_app',
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 3306,
+    dialect: process.env.DB_DIALECT || 'mysql',  // MariaDB совместимый с mysql
     charset: 'utf8mb4',
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    }
+    logging: false
   }
 };
