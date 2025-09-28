@@ -29,15 +29,15 @@ exports.register = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { 
-      username, 
-      password, 
-      firstName, 
-      lastName, 
-      role, 
-      phone, 
-      masterId, 
-      departmentId, 
+    const {
+      username,
+      password,
+      firstName,
+      lastName,
+      role,
+      phone,
+      masterId,
+      departmentId,
       position
     } = req.body;
 
@@ -107,21 +107,23 @@ exports.login = async (req, res) => {
 
     // Упрощенная проверка пароля для тестов
     const passwordValid = password === user.passwordHash;
-    
+
     if (!passwordValid) {
       return res.status(401).json({ message: 'Неверный логин или пароль' });
     }
 
     // Генерация JWT токена
+    // Генерация JWT токена
     const token = jwt.sign(
-      { 
-        userId: user.id, 
-        role: user.role, 
-        username: user.username 
+      {
+        userId: user.id,
+        role: user.role,
+        username: user.username
       },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '30d' }  // ← Увеличено до 30 дней
     );
+
 
     res.json({
       token,
@@ -171,7 +173,7 @@ exports.getMe = async (req, res) => {
       role: user.role,
       position: user.position,
       departmentId: user.departmentId,
-      department: user.department 
+      department: user.department
         ? { id: user.department.id, name: user.department.name }
         : null
     };
@@ -187,16 +189,16 @@ exports.getMe = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      username, 
-      firstName, 
-      lastName, 
-      role, 
-      phone, 
-      masterId, 
-      departmentId, 
+    const {
+      username,
+      firstName,
+      lastName,
+      role,
+      phone,
+      masterId,
+      departmentId,
       position,
-      password 
+      password
     } = req.body;
 
     const user = await db.User.findByPk(id);
@@ -232,9 +234,9 @@ exports.updateUser = async (req, res) => {
       }
     });
 
-    res.json({ 
-      message: 'Пользователь успешно обновлен', 
-      user: updatedUser 
+    res.json({
+      message: 'Пользователь успешно обновлен',
+      user: updatedUser
     });
 
   } catch (e) {
@@ -248,11 +250,11 @@ exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
     const deleted = await db.User.destroy({ where: { id } });
-    
+
     if (!deleted) {
       return res.status(404).json({ message: 'Пользователь не найден' });
     }
-    
+
     res.json({ message: 'Пользователь удалён' });
   } catch (e) {
     console.error('Delete user error:', e);
